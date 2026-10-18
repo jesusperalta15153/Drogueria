@@ -84,6 +84,22 @@ namespace Drogueria.Controllers
         [Route("/Home/ErrorStatus")]
         public IActionResult ErrorStatus(int? code)
         {
+            var reExecuteFeature = HttpContext.Features.Get<Microsoft.AspNetCore.Diagnostics.IStatusCodeReExecuteFeature>();
+            var originalPath = reExecuteFeature?.OriginalPath ?? HttpContext.Request.Path.Value ?? "";
+
+            // Si es un recurso estático (imágenes, iconos, mapas, css, js, etc.) o una petición AJAX,
+            // responder con el código de estado sin redirigir ni contaminar TempData.
+            if (originalPath.Contains('.') || Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return StatusCode(code ?? 404);
+            }
+
+            // Si la ruta original ya es /Tienda o /Tienda/Catalogo, redirigir sin fijar TempData de error
+            if (originalPath.StartsWith("/Tienda", StringComparison.OrdinalIgnoreCase))
+            {
+                return RedirectToAction("Catalogo", "Tienda");
+            }
+
             if (code == 404)
             {
                 TempData["Error"] = "La página a la que intentaste acceder no existe o fue movida.";

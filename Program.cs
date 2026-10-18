@@ -341,10 +341,11 @@ using (var scope = app.Services.CreateScope())
             cmd.ExecuteNonQuery();
         }
 
-        // Sembrar cuentas iniciales si no existen (Admin, Recepcionista, Repartidor, Cliente)
+        // Sembrar cuentas iniciales y catálogo inicial si no existen
         try
         {
             DbInitializer.SeedUsers(db);
+            DbInitializer.SeedCatalog(db);
         }
         catch { }
     }

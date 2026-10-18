@@ -26,6 +26,10 @@ namespace Drogueria.Controllers
             _cache = cache;
         }
 
+        // GET: /Tienda o /Tienda/Index
+        [HttpGet]
+        public IActionResult Index() => RedirectToAction(nameof(Catalogo));
+
         // GET: /Tienda/Catalogo
         public async Task<IActionResult> Catalogo(string? buscar, Guid? categoriaId)
         {
