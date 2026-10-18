@@ -213,6 +213,13 @@ using (var scope = app.Services.CreateScope())
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
             cmd.ExecuteNonQuery();
         }
+
+        // Sembrar cuentas iniciales si no existen (Admin, Recepcionista, Repartidor, Cliente)
+        try
+        {
+            DbInitializer.SeedUsers(db);
+        }
+        catch { }
     }
     catch { }
 }
