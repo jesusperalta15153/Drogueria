@@ -72,9 +72,50 @@ builder.Services.AddSession(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 });
 
+// Resolver cadena de conexión de forma flexible (compatible con Aiven URI, ADO.NET y Render ENV)
+var rawConnectionString = 
+    Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+    ?? Environment.GetEnvironmentVariable("DefaultConnection")
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? Environment.GetEnvironmentVariable("MYSQL_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "";
+
+static string NormalizarMySql(string input)
+{
+    if (string.IsNullOrWhiteSpace(input)) return input;
+    input = input.Trim().Trim('"', '\'');
+    if (input.StartsWith("mysql://", StringComparison.OrdinalIgnoreCase))
+    {
+        try
+        {
+            var uri = new Uri(input);
+            var userInfo = uri.UserInfo.Split(':');
+            var user = Uri.UnescapeDataString(userInfo[0]);
+            var password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "";
+            var host = uri.Host;
+            var port = uri.Port > 0 ? uri.Port : 3306;
+            var database = uri.AbsolutePath.TrimStart('/');
+            if (database.Contains('?'))
+            {
+                database = database.Substring(0, database.IndexOf('?'));
+            }
+            return $"Server={host};Port={port};Database={database};User={user};Password={password};SslMode=Required;TreatTinyAsBoolean=true;";
+        }
+        catch { }
+    }
+    if (!input.Contains("SslMode", StringComparison.OrdinalIgnoreCase) && input.Contains("aivencloud.com", StringComparison.OrdinalIgnoreCase))
+    {
+        input = input.TrimEnd(';') + ";SslMode=Required;";
+    }
+    return input;
+}
+
+var connectionString = NormalizarMySql(rawConnectionString);
+
 builder.Services.AddDbContext<AppDbContex>(options =>
     options.UseMySql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
+        connectionString,
         new MySqlServerVersion(new Version(8, 0, 30)),
         mySqlOptions => mySqlOptions.EnableRetryOnFailure()
     )
