@@ -25,12 +25,13 @@ namespace Drogueria.Controllers
         public async Task<IActionResult> Index()
         {
             var productos = await _context.Productos
+                .AsNoTracking()
                 .Include(p => p.Categoria)
                 .OrderByDescending(p => p.FechaCreacion)
                 .ToListAsync();
 
             ViewBag.Categorias = new SelectList(
-                await _context.Categorias.Where(c => c.Estado).OrderBy(c => c.Nombre).ToListAsync(),
+                await _context.Categorias.AsNoTracking().Where(c => c.Estado).OrderBy(c => c.Nombre).ToListAsync(),
                 "Id", "Nombre");
 
             return View("~/Views/Home/pages/_Productos.cshtml", productos);

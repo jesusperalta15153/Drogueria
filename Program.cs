@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.ResponseCompression;
+using System.IO.Compression;
 using System.Globalization;
 using Drogueria.Data;
 using Drogueria.Hubs;
@@ -24,6 +26,24 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 builder.Services.AddControllersWithViews();
+builder.Services.AddMemoryCache();
+
+// Compresión de respuestas HTTP (Gzip y Brotli para acelerar carga de páginas y estáticos)
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
 builder.Services.AddScoped<AsignacionRepartidorService>();
 builder.Services.AddSingleton<ILoginRateLimiter, LoginRateLimiter>();
 
@@ -108,6 +128,11 @@ static string NormalizarMySql(string input)
     {
         input = input.TrimEnd(';') + ";SslMode=Required;";
     }
+    // Optimizar connection pooling y keepalive para MySQL en la nube (Aiven / Render)
+    if (!input.Contains("Pooling", StringComparison.OrdinalIgnoreCase))
+    {
+        input = input.TrimEnd(';') + ";Pooling=true;MinPoolSize=5;MaxPoolSize=50;ConnectionReset=false;Keepalive=30;";
+    }
     return input;
 }
 
@@ -159,7 +184,18 @@ app.Use(async (context, next) =>
 
 app.UseRequestLocalization();
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+// Comprimir respuestas antes de enviar
+app.UseResponseCompression();
+
+// Servir archivos estáticos con encabezados de caché del navegador (30 días)
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=2592000,must-revalidate";
+    }
+});
 
 app.UseRouting();
 
@@ -249,6 +285,46 @@ using (var scope = app.Services.CreateScope())
             cmdDesc.ExecuteNonQuery();
         }
         catch { }
+
+        void AsegurarIndice(string tabla, string indice, string columnasDef)
+        {
+            try
+            {
+                using var cmdIdxCheck = conn.CreateCommand();
+                cmdIdxCheck.CommandText = @"
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.STATISTICS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                      AND LOWER(TABLE_NAME) = LOWER(@tabla) 
+                      AND LOWER(INDEX_NAME) = LOWER(@indice);";
+
+                var pTabla = cmdIdxCheck.CreateParameter();
+                pTabla.ParameterName = "@tabla";
+                pTabla.Value = tabla;
+                cmdIdxCheck.Parameters.Add(pTabla);
+
+                var pIdx = cmdIdxCheck.CreateParameter();
+                pIdx.ParameterName = "@indice";
+                pIdx.Value = indice;
+                cmdIdxCheck.Parameters.Add(pIdx);
+
+                var count = Convert.ToInt32(cmdIdxCheck.ExecuteScalar());
+                if (count == 0)
+                {
+                    using var cmdAddIdx = conn.CreateCommand();
+                    cmdAddIdx.CommandText = $"ALTER TABLE `{tabla}` ADD INDEX `{indice}` ({columnasDef});";
+                    cmdAddIdx.ExecuteNonQuery();
+                }
+            }
+            catch { }
+        }
+
+        // Índices de alto rendimiento para acelerar consultas críticas
+        AsegurarIndice("Usuarios", "idx_usuarios_email", "`Email`");
+        AsegurarIndice("Productos", "idx_productos_estado_stock", "`Estado`, `Stock`");
+        AsegurarIndice("Productos", "idx_productos_categoria", "`CategoriaId`");
+        AsegurarIndice("Pedidos", "idx_pedidos_usuario_estado", "`UsuarioId`, `Estado`");
+        AsegurarIndice("Pedidos", "idx_pedidos_repartidor_estado", "`RepartidorId`, `Estado`");
 
         // Asegurar tabla persistente de Mensajes de Chat
         using (var cmd = conn.CreateCommand())

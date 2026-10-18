@@ -65,6 +65,7 @@ namespace Drogueria.Controllers
             }
 
             var usuario = await _context.Usuarios
+                .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == term ||
                                          u.Nombre.ToLower() == term ||
                                          (u.Nombre + " " + u.Apellido).ToLower() == term);

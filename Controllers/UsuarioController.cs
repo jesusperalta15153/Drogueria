@@ -1,19 +1,37 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Drogueria.Data;
 using Drogueria.Models;
 
 namespace Drogueria.Controllers
 {
+    public class DashboardMetricsCache
+    {
+        public int TotalProductos { get; set; }
+        public int TotalUsuarios { get; set; }
+        public int TotalCategorias { get; set; }
+        public int TotalPedidos { get; set; }
+        public decimal IngresosTotales { get; set; }
+        public int PedidosPendientes { get; set; }
+        public int PedidosConfirmados { get; set; }
+        public int PedidosEntregados { get; set; }
+        public int PedidosCancelados { get; set; }
+        public List<Producto> ProductosStockBajo { get; set; } = new();
+        public decimal[] VentasPorDia { get; set; } = new decimal[7];
+    }
+
     [Authorize(Roles = "Administrador")]
     public class UsuarioController : Controller
     {
         private readonly AppDbContex _context;
+        private readonly IMemoryCache _cache;
 
-        public UsuarioController(AppDbContex context)
+        public UsuarioController(AppDbContex context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         // Dashboard Administrador (Métricas, accesos rápidos y últimos pedidos)
@@ -23,45 +41,75 @@ namespace Drogueria.Controllers
             var hace7Dias = hoy.AddDays(-7);
 
             ViewBag.FechaActual = hoy;
-            ViewBag.TotalProductos = await _context.Productos.CountAsync();
-            ViewBag.TotalUsuarios = await _context.Usuarios.CountAsync();
-            ViewBag.TotalCategorias = await _context.Categorias.CountAsync();
-            ViewBag.TotalPedidos = await _context.Pedidos.CountAsync();
-            ViewBag.IngresosTotales = await _context.Pedidos.Where(p => p.Estado != "Cancelado").SumAsync(p => (decimal?)p.Total) ?? 0m;
 
-            ViewBag.PedidosPendientes = await _context.Pedidos.CountAsync(p => p.Estado == "Pendiente");
-            ViewBag.PedidosConfirmados = await _context.Pedidos.CountAsync(p => p.Estado == "Confirmado");
-            ViewBag.PedidosEntregados = await _context.Pedidos.CountAsync(p => p.Estado == "Entregado");
-            ViewBag.PedidosCancelados = await _context.Pedidos.CountAsync(p => p.Estado == "Cancelado");
-
-            ViewBag.ProductosStockBajo = await _context.Productos
-                .Include(p => p.Categoria)
-                .Where(p => p.Stock <= p.StockMinimo && p.Estado)
-                .OrderBy(p => p.Stock)
-                .Take(5)
-                .ToListAsync();
-
-            // Obtener ventas de los últimos 7 días para el gráfico
-            var ventasPor7Dias = await _context.Pedidos
-                .Where(p => p.Fecha >= hace7Dias && p.Estado != "Cancelado")
-                .GroupBy(p => p.Fecha.Date)
-                .Select(g => new { Fecha = g.Key, Total = g.Sum(p => p.Total) })
-                .OrderBy(v => v.Fecha)
-                .ToListAsync();
-
-            // Crear array con las ventas de cada día (0 si no hubo ventas ese día)
-            var ventasPorDia = new decimal[7];
-            for (int i = 0; i < 7; i++)
+            const string cacheKey = "Admin_Dashboard_Metrics";
+            if (!_cache.TryGetValue(cacheKey, out DashboardMetricsCache? metrics) || metrics == null)
             {
-                var fecha = hace7Dias.AddDays(i).Date;
-                var venta = ventasPor7Dias.FirstOrDefault(v => v.Fecha == fecha);
-                ventasPorDia[i] = venta?.Total ?? 0m;
+                metrics = new DashboardMetricsCache();
+
+                metrics.TotalProductos = await _context.Productos.AsNoTracking().CountAsync();
+                metrics.TotalUsuarios = await _context.Usuarios.AsNoTracking().CountAsync();
+                metrics.TotalCategorias = await _context.Categorias.AsNoTracking().CountAsync();
+
+                // 1 sola consulta agrupada para todos los estados de pedidos y totales
+                var estadosPedidos = await _context.Pedidos
+                    .AsNoTracking()
+                    .GroupBy(p => p.Estado)
+                    .Select(g => new { Estado = g.Key, Cantidad = g.Count(), Total = g.Sum(p => (decimal?)p.Total) ?? 0m })
+                    .ToListAsync();
+
+                metrics.TotalPedidos = estadosPedidos.Sum(e => e.Cantidad);
+                metrics.IngresosTotales = estadosPedidos.Where(e => e.Estado != "Cancelado").Sum(e => e.Total);
+                metrics.PedidosPendientes = estadosPedidos.FirstOrDefault(e => e.Estado == "Pendiente")?.Cantidad ?? 0;
+                metrics.PedidosConfirmados = estadosPedidos.FirstOrDefault(e => e.Estado == "Confirmado")?.Cantidad ?? 0;
+                metrics.PedidosEntregados = estadosPedidos.FirstOrDefault(e => e.Estado == "Entregado")?.Cantidad ?? 0;
+                metrics.PedidosCancelados = estadosPedidos.FirstOrDefault(e => e.Estado == "Cancelado")?.Cantidad ?? 0;
+
+                metrics.ProductosStockBajo = await _context.Productos
+                    .AsNoTracking()
+                    .Include(p => p.Categoria)
+                    .Where(p => p.Stock <= p.StockMinimo && p.Estado)
+                    .OrderBy(p => p.Stock)
+                    .Take(5)
+                    .ToListAsync();
+
+                // Obtener ventas de los últimos 7 días para el gráfico
+                var ventasPor7Dias = await _context.Pedidos
+                    .AsNoTracking()
+                    .Where(p => p.Fecha >= hace7Dias && p.Estado != "Cancelado")
+                    .GroupBy(p => p.Fecha.Date)
+                    .Select(g => new { Fecha = g.Key, Total = g.Sum(p => p.Total) })
+                    .OrderBy(v => v.Fecha)
+                    .ToListAsync();
+
+                // Crear array con las ventas de cada día (0 si no hubo ventas ese día)
+                var ventasPorDia = new decimal[7];
+                for (int i = 0; i < 7; i++)
+                {
+                    var fecha = hace7Dias.AddDays(i).Date;
+                    var venta = ventasPor7Dias.FirstOrDefault(v => v.Fecha == fecha);
+                    ventasPorDia[i] = venta?.Total ?? 0m;
+                }
+                metrics.VentasPorDia = ventasPorDia;
+
+                _cache.Set(cacheKey, metrics, TimeSpan.FromSeconds(60));
             }
 
-            ViewBag.VentasUltimos7Dias = ventasPorDia;
-            ViewBag.HayDatosReales = ventasPorDia.Any(v => v > 0);
+            ViewBag.TotalProductos = metrics.TotalProductos;
+            ViewBag.TotalUsuarios = metrics.TotalUsuarios;
+            ViewBag.TotalCategorias = metrics.TotalCategorias;
+            ViewBag.TotalPedidos = metrics.TotalPedidos;
+            ViewBag.IngresosTotales = metrics.IngresosTotales;
+            ViewBag.PedidosPendientes = metrics.PedidosPendientes;
+            ViewBag.PedidosConfirmados = metrics.PedidosConfirmados;
+            ViewBag.PedidosEntregados = metrics.PedidosEntregados;
+            ViewBag.PedidosCancelados = metrics.PedidosCancelados;
+            ViewBag.ProductosStockBajo = metrics.ProductosStockBajo;
+            ViewBag.VentasUltimos7Dias = metrics.VentasPorDia;
+            ViewBag.HayDatosReales = metrics.VentasPorDia.Any(v => v > 0);
 
             var ultimosPedidos = await _context.Pedidos
+                .AsNoTracking()
                 .Include(p => p.Usuario)
                 .OrderByDescending(p => p.Fecha)
                 .Take(6)
@@ -73,7 +121,10 @@ namespace Drogueria.Controllers
         // Listar usuarios
         public async Task<IActionResult> Index()
         {
-            var usuarios = await _context.Usuarios.OrderByDescending(u => u.Uuid).ToListAsync();
+            var usuarios = await _context.Usuarios
+                .AsNoTracking()
+                .OrderByDescending(u => u.Uuid)
+                .ToListAsync();
             return View("~/Views/Home/pages/_Usuarios.cshtml", usuarios);
         }
 

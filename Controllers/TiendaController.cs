@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
 using System.Text.Json;
 using Drogueria.Data;
@@ -14,19 +15,22 @@ namespace Drogueria.Controllers
     {
         private readonly AppDbContex _context;
         private readonly AsignacionRepartidorService _asignacionService;
+        private readonly IMemoryCache _cache;
         private const string CarritoSessionKey = "Carrito";
         private const string CarritoCookieKey  = "Drogueria_Carrito_Persistente";
 
-        public TiendaController(AppDbContex context, AsignacionRepartidorService asignacionService)
+        public TiendaController(AppDbContex context, AsignacionRepartidorService asignacionService, IMemoryCache cache)
         {
             _context = context;
             _asignacionService = asignacionService;
+            _cache = cache;
         }
 
         // GET: /Tienda/Catalogo
         public async Task<IActionResult> Catalogo(string? buscar, Guid? categoriaId)
         {
             var query = _context.Productos
+                .AsNoTracking()
                 .Include(p => p.Categoria)
                 .Where(p => p.Estado && p.Stock > 0);
 
@@ -38,11 +42,19 @@ namespace Drogueria.Controllers
 
             var productos = await query.OrderBy(p => p.Nombre).ToListAsync();
 
-            ViewBag.Categorias = await _context.Categorias
-                .Where(c => c.Estado)
-                .OrderBy(c => c.Nombre)
-                .ToListAsync();
+            const string catCacheKey = "Categorias_Tienda_Catalogo";
+            if (!_cache.TryGetValue(catCacheKey, out List<Categoria>? categorias) || categorias == null)
+            {
+                categorias = await _context.Categorias
+                    .AsNoTracking()
+                    .Where(c => c.Estado)
+                    .OrderBy(c => c.Nombre)
+                    .ToListAsync();
 
+                _cache.Set(catCacheKey, categorias, TimeSpan.FromMinutes(5));
+            }
+
+            ViewBag.Categorias = categorias;
             ViewBag.BuscarActual = buscar;
             ViewBag.CategoriaActual = categoriaId;
             ViewData["Title"] = "Catálogo";
@@ -700,6 +712,7 @@ namespace Drogueria.Controllers
             var usuarioId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             var pedidos = await _context.Pedidos
+                .AsNoTracking()
                 .Include(p => p.Repartidor)
                 .Include(p => p.Detalles)
                     .ThenInclude(d => d.Producto)
@@ -720,6 +733,7 @@ namespace Drogueria.Controllers
             var usuarioId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             var pedido = await _context.Pedidos
+                .AsNoTracking()
                 .Include(p => p.Repartidor)
                 .Include(p => p.Usuario)
                 .Include(p => p.Detalles)

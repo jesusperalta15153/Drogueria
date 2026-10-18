@@ -25,9 +25,10 @@ namespace Drogueria.Controllers
         public async Task<IActionResult> MisDomicilios()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Uuid == userId);
+            var usuario = await _context.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Uuid == userId);
 
             var pedidos = await _context.Pedidos
+                .AsNoTracking()
                 .Include(p => p.Usuario)
                 .Include(p => p.Detalles)
                     .ThenInclude(d => d.Producto)
@@ -47,9 +48,10 @@ namespace Drogueria.Controllers
         public async Task<IActionResult> Historial()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Uuid == userId);
+            var usuario = await _context.Usuarios.AsNoTracking().FirstOrDefaultAsync(u => u.Uuid == userId);
 
             var pedidos = await _context.Pedidos
+                .AsNoTracking()
                 .Include(p => p.Usuario)
                 .Include(p => p.Detalles)
                     .ThenInclude(d => d.Producto)

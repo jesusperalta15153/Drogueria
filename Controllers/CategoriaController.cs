@@ -20,6 +20,7 @@ namespace Drogueria.Controllers
         public async Task<IActionResult> Index()
         {
             var categorias = await _context.Categorias
+                .AsNoTracking()
                 .OrderByDescending(c => c.FechaCreacion)
                 .ToListAsync();
 

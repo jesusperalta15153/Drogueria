@@ -3,34 +3,43 @@ using Drogueria.Data;
 using Drogueria.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Drogueria.Controllers
 {
     public class HomeController : Controller
     {
         private readonly AppDbContex _context;
+        private readonly IMemoryCache _cache;
+        private const string VitrinaCacheKey = "Productos_Vitrina_Home";
 
-        public HomeController(AppDbContex context)
+        public HomeController(AppDbContex context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
-        // GET: / o /Home o /Home/Index
-        [HttpGet]
-        public async Task<IActionResult> Index()
+        private async Task<List<Producto>> ObtenerProductosVitrinaAsync()
         {
-            // Traer hasta 8 productos activos con stock para la vitrina pública
+            if (_cache.TryGetValue(VitrinaCacheKey, out List<Producto>? cacheProductos) && cacheProductos != null)
+            {
+                return cacheProductos;
+            }
+
             List<Producto> productos = new();
             try
             {
                 if (_context?.Productos != null)
                 {
                     productos = await _context.Productos
+                        .AsNoTracking()
                         .Include(p => p.Categoria)
                         .Where(p => p.Estado && p.Stock > 0)
                         .OrderByDescending(p => p.FechaCreacion)
                         .Take(8)
                         .ToListAsync();
+
+                    _cache.Set(VitrinaCacheKey, productos, TimeSpan.FromMinutes(3));
                 }
             }
             catch (Exception ex)
@@ -39,7 +48,14 @@ namespace Drogueria.Controllers
                 productos = new List<Producto>();
             }
 
-            ViewBag.ProductosVitrina = productos;
+            return productos;
+        }
+
+        // GET: / o /Home o /Home/Index
+        [HttpGet]
+        public async Task<IActionResult> Index()
+        {
+            ViewBag.ProductosVitrina = await ObtenerProductosVitrinaAsync();
             return View("~/Views/Home/Pagina_Inicio/Index.cshtml");
         }
 
@@ -47,26 +63,7 @@ namespace Drogueria.Controllers
         [HttpGet]
         public async Task<IActionResult> Pagina_Inicio()
         {
-            List<Producto> productos = new();
-            try
-            {
-                if (_context?.Productos != null)
-                {
-                    productos = await _context.Productos
-                        .Include(p => p.Categoria)
-                        .Where(p => p.Estado && p.Stock > 0)
-                        .OrderByDescending(p => p.FechaCreacion)
-                        .Take(8)
-                        .ToListAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error al consultar productos de vitrina: {ex.Message}");
-                productos = new List<Producto>();
-            }
-
-            ViewBag.ProductosVitrina = productos;
+            ViewBag.ProductosVitrina = await ObtenerProductosVitrinaAsync();
             return View("~/Views/Home/Pagina_Inicio/Index.cshtml");
         }
 

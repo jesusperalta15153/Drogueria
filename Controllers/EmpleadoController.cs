@@ -25,6 +25,7 @@ namespace Drogueria.Controllers
         public async Task<IActionResult> Productos()
         {
             var productos = await _context.Productos
+                .AsNoTracking()
                 .Include(p => p.Categoria)
                 .OrderByDescending(p => p.FechaCreacion)
                 .ToListAsync();
@@ -32,6 +33,7 @@ namespace Drogueria.Controllers
             ViewData["Title"] = "Productos";
             ViewData["ActiveNav"] = "productos";
             ViewBag.Categorias = await _context.Categorias
+                .AsNoTracking()
                 .Where(c => c.Estado)
                 .OrderBy(c => c.Nombre)
                 .ToListAsync();
@@ -44,6 +46,7 @@ namespace Drogueria.Controllers
         public async Task<IActionResult> Inventario()
         {
             var productos = await _context.Productos
+                .AsNoTracking()
                 .Include(p => p.Categoria)
                 .OrderBy(p => p.Nombre)
                 .ToListAsync();
@@ -51,6 +54,7 @@ namespace Drogueria.Controllers
             ViewData["Title"] = "Inventario";
             ViewData["ActiveNav"] = "inventario";
             ViewBag.Categorias = await _context.Categorias
+                .AsNoTracking()
                 .Where(c => c.Estado)
                 .OrderBy(c => c.Nombre)
                 .ToListAsync();
@@ -95,6 +99,7 @@ namespace Drogueria.Controllers
         public async Task<IActionResult> Pedidos()
         {
             var pedidos = await _context.Pedidos
+                .AsNoTracking()
                 .Include(p => p.Usuario)
                 .Include(p => p.Repartidor)
                 .Include(p => p.Detalles)
@@ -106,6 +111,7 @@ namespace Drogueria.Controllers
             ViewData["ActiveNav"] = "pedidos";
 
             ViewBag.Repartidores = await _context.Usuarios
+                .AsNoTracking()
                 .Where(u => u.Rol == "Repartidor" && u.Estado)
                 .OrderBy(u => u.Nombre)
                 .ToListAsync();
