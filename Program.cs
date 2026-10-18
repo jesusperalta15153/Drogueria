@@ -189,31 +189,35 @@ using (var scope = app.Services.CreateScope())
 
         void AsegurarColumna(string tabla, string columna, string tipoDef)
         {
-            using var cmdCheck = conn.CreateCommand();
-            cmdCheck.CommandText = @"
-                SELECT COUNT(*) 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_SCHEMA = DATABASE() 
-                  AND TABLE_NAME = @tabla 
-                  AND COLUMN_NAME = @columna;";
-
-            var pTabla = cmdCheck.CreateParameter();
-            pTabla.ParameterName = "@tabla";
-            pTabla.Value = tabla;
-            cmdCheck.Parameters.Add(pTabla);
-
-            var pCol = cmdCheck.CreateParameter();
-            pCol.ParameterName = "@columna";
-            pCol.Value = columna;
-            cmdCheck.Parameters.Add(pCol);
-
-            var count = Convert.ToInt32(cmdCheck.ExecuteScalar());
-            if (count == 0)
+            try
             {
-                using var cmdAlter = conn.CreateCommand();
-                cmdAlter.CommandText = $"ALTER TABLE `{tabla}` ADD COLUMN `{columna}` {tipoDef};";
-                cmdAlter.ExecuteNonQuery();
+                using var cmdCheck = conn.CreateCommand();
+                cmdCheck.CommandText = @"
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                      AND LOWER(TABLE_NAME) = LOWER(@tabla) 
+                      AND LOWER(COLUMN_NAME) = LOWER(@columna);";
+
+                var pTabla = cmdCheck.CreateParameter();
+                pTabla.ParameterName = "@tabla";
+                pTabla.Value = tabla;
+                cmdCheck.Parameters.Add(pTabla);
+
+                var pCol = cmdCheck.CreateParameter();
+                pCol.ParameterName = "@columna";
+                pCol.Value = columna;
+                cmdCheck.Parameters.Add(pCol);
+
+                var count = Convert.ToInt32(cmdCheck.ExecuteScalar());
+                if (count == 0)
+                {
+                    using var cmdAlter = conn.CreateCommand();
+                    cmdAlter.CommandText = $"ALTER TABLE `{tabla}` ADD COLUMN `{columna}` {tipoDef};";
+                    cmdAlter.ExecuteNonQuery();
+                }
             }
+            catch { }
         }
 
         // Asegurar columnas en Usuarios
@@ -230,6 +234,12 @@ using (var scope = app.Services.CreateScope())
         AsegurarColumna("Pedidos", "LatitudRepartidor", "DOUBLE NULL");
         AsegurarColumna("Pedidos", "LongitudRepartidor", "DOUBLE NULL");
         AsegurarColumna("Pedidos", "UltimaUbicacionFecha", "DATETIME(6) NULL");
+
+        // Asegurar columnas en Productos (evita 'Unknown column p.LimiteMaximoPorPedido')
+        AsegurarColumna("Productos", "Miligramos", "INT NOT NULL DEFAULT 0");
+        AsegurarColumna("Productos", "UnidadMedida", "VARCHAR(20) NOT NULL DEFAULT 'mg'");
+        AsegurarColumna("Productos", "StockMinimo", "INT NOT NULL DEFAULT 5");
+        AsegurarColumna("Productos", "LimiteMaximoPorPedido", "INT NULL");
 
         // Ampliar campo de descripción de productos a 2000 caracteres
         try
