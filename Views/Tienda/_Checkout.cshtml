@@ -1,0 +1,1472 @@
+@model List<Drogueria.Models.CarritoItem>
+@{
+    Layout = "~/Views/Shared/_LayoutCliente.cshtml";
+    ViewData["Title"] = "Confirmar Pedido";
+    ViewData["ActiveNav"] = "carrito";
+    var direccion = ViewBag.DireccionEntrega as string ?? "";
+    var subtotal = Model.Sum(i => i.Subtotal);
+    var costoEnvio = subtotal >= 45000m ? 0m : 8000m;
+    var propinaInicial = ViewBag.Propina != null ? (decimal)ViewBag.Propina : 1000m;
+    var total = subtotal + costoEnvio + propinaInicial;
+}
+
+<style>
+/* ── Tarjetas de método de pago ── */
+.pago-card {
+    border: 2px solid var(--border, #dee2e6);
+    border-radius: 16px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all .22s ease;
+    background: var(--bg-card, #fff);
+    position: relative;
+    user-select: none;
+}
+.pago-card:hover { border-color: var(--primary, #0d6efd); box-shadow: 0 4px 18px rgba(13,110,253,.10); }
+.pago-card.selected {
+    border-color: var(--primary, #0d6efd);
+    background: var(--primary-soft, #e8f0fe);
+    box-shadow: 0 4px 18px rgba(13,110,253,.15);
+}
+.pago-card input[type="radio"] { display: none; }
+.pago-check {
+    width: 22px; height: 22px;
+    border: 2px solid var(--border, #dee2e6);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .18s;
+    flex-shrink: 0;
+}
+.pago-card.selected .pago-check {
+    background: var(--primary, #0d6efd);
+    border-color: var(--primary, #0d6efd);
+}
+.pago-check::after {
+    content: '';
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #fff;
+    display: none;
+}
+.pago-card.selected .pago-check::after { display: block; }
+
+/* ── Sub-opciones tarjeta ── */
+.sub-metodos {
+    display: none;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border, #dee2e6);
+    gap: 10px;
+}
+.pago-card.selected .sub-metodos { display: flex; }
+.sub-btn {
+    flex: 1; padding: 10px 8px;
+    border: 2px solid var(--border, #dee2e6);
+    border-radius: 10px; cursor: pointer;
+    text-align: center; font-size: 13px;
+    transition: all .18s; background: var(--bg-muted, #f8f9fa);
+}
+.sub-btn:hover { border-color: var(--primary, #0d6efd); }
+.sub-btn.sel {
+    border-color: var(--primary, #0d6efd);
+    background: var(--primary-soft, #e8f0fe);
+    color: var(--primary, #0d6efd); font-weight: 600;
+}
+
+/* ── Formulario de tarjeta ── */
+#formTarjeta {
+    display: none;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border, #dee2e6);
+    animation: fadeIn .25s ease;
+}
+.pago-card.selected #formTarjeta { display: block; }
+@@keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* ── Visualizador de tarjeta ── */
+.card-preview {
+    border-radius: 16px;
+    padding: 22px 24px;
+    color: #fff;
+    min-height: 130px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 18px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    box-shadow: 0 8px 32px rgba(0,0,0,.25);
+    transition: background .4s ease;
+}
+.card-preview.visa   { background: linear-gradient(135deg, #1a56db 0%, #0e4fa8 60%, #0a3d8f 100%); }
+.card-preview.master { background: linear-gradient(135deg, #eb5757 0%, #c0392b 50%, #922b21 100%); }
+.card-preview::before {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.08);
+}
+.card-preview::after {
+    content: '';
+    position: absolute; bottom: -60px; left: -30px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.05);
+}
+.card-brand-badge {
+    font-size: 11px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; opacity: .8; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+}
+.card-number-preview {
+    font-size: 18px; font-weight: 600;
+    letter-spacing: .18em; margin-bottom: 14px;
+    font-family: 'Courier New', monospace;
+    word-spacing: 8px;
+}
+.card-meta { display: flex; justify-content: space-between; font-size: 12px; opacity: .8; }
+.card-meta-label { font-size: 9px; opacity: .7; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 2px; }
+
+/* ── Tabla de productos ── */
+.checkout-table { width: 100%; border-collapse: collapse; }
+.checkout-table th {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--t-muted); padding: 8px 10px;
+    border-bottom: 1px solid var(--border, #dee2e6);
+}
+.checkout-table td { padding: 12px 10px; vertical-align: middle; font-size: 14px; }
+.checkout-table tr + tr td { border-top: 1px solid var(--border, #dee2e6); }
+.checkout-img {
+    width: 48px; height: 48px; border-radius: 8px;
+    object-fit: cover; background: var(--bg-muted, #f8f9fa);
+}
+
+/* Input de tarjeta */
+.input-card-wrap { position: relative; }
+.card-brand-icon {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    font-size: 20px; pointer-events: none;
+    transition: all .2s;
+}
+.campo-requerido { border-color: #dc3545 !important; }
+
+/* PASARELA DE PAGO — MODAL OVERLAY */
+#pasarelaOverlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(10,12,26,.82);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity .35s ease;
+}
+#pasarelaOverlay.show { opacity: 1; pointer-events: all; }
+
+.pasarela-box {
+    background: #fff;
+    border-radius: 24px;
+    padding: 40px 36px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 32px 80px rgba(0,0,0,.35);
+    text-align: center;
+    position: relative;
+    animation: boxIn .4s cubic-bezier(.34,1.56,.64,1) both;
+}
+@@keyframes boxIn { from { transform: scale(.85) translateY(20px); opacity:0; } to { transform: none; opacity:1; } }
+
+/* ── Pantallas ── */
+.pg-screen { display: none; }
+.pg-screen.active { display: block; }
+
+/* ── Banco header ── */
+.pg-bank-header {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.pg-bank-logo {
+    width: 42px; height: 42px; border-radius: 10px;
+    background: linear-gradient(135deg,#0d6efd,#6610f2);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px;
+}
+.pg-bank-name { font-weight: 700; font-size: 15px; color: #1a1a2e; line-height:1.1; }
+.pg-bank-name small { font-weight: 400; font-size: 11px; color: #888; display:block; }
+
+/* ── Spinner procesando ── */
+.pg-spinner-wrap { position: relative; width: 90px; height: 90px; margin: 0 auto 24px; }
+.pg-spinner-wrap svg { position: absolute; inset: 0; }
+.pg-spinner-track { fill: none; stroke: #e8eaf6; stroke-width: 6; }
+.pg-spinner-arc {
+    fill: none; stroke: url(#pgGrad); stroke-width: 6;
+    stroke-linecap: round;
+    stroke-dasharray: 220;
+    stroke-dashoffset: 220;
+    transform-origin: center;
+    animation: arcSpin 1.4s ease-in-out infinite;
+}
+@@keyframes arcSpin {
+    0%   { stroke-dashoffset: 200; transform: rotate(0deg); }
+    50%  { stroke-dashoffset: 40;  transform: rotate(180deg); }
+    100% { stroke-dashoffset: 200; transform: rotate(360deg); }
+}
+.pg-spinner-icon {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: #0d6efd;
+    animation: pgIconPulse 1.4s ease-in-out infinite;
+}
+@@keyframes pgIconPulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.12);opacity:.8;} }
+
+/* ── Barra de progreso ── */
+.pg-progress-wrap { margin: 20px 0 16px; }
+.pg-progress-bar-bg {
+    height: 6px; border-radius: 99px;
+    background: #e8eaf6; overflow: hidden;
+}
+.pg-progress-bar-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg,#0d6efd,#6610f2);
+    width: 0%; transition: width .6s ease;
+}
+
+/* ── Pasos ── */
+.pg-steps { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+.pg-step {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: #aaa; padding: 4px 10px;
+    border-radius: 99px; background: #f5f5f5;
+    transition: all .3s;
+}
+.pg-step.done  { background: #e8f5e9; color: #2e7d32; }
+.pg-step.active { background: #e8eaf6; color: #0d6efd; font-weight: 600; }
+.pg-step i { font-size: 12px; }
+
+/* ── Check éxito ── */
+.pg-success-circle {
+    width: 90px; height: 90px; border-radius: 50%;
+    background: linear-gradient(135deg,#00c853,#69f0ae);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 8px 30px rgba(0,200,83,.35);
+    animation: successPop .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+@@keyframes successPop { from{transform:scale(0);opacity:0;} to{transform:scale(1);opacity:1;} }
+.pg-check-icon { font-size: 42px; color: #fff; }
+.pg-approval-code {
+    font-family: 'Courier New', monospace;
+    font-size: 13px; letter-spacing: .1em;
+    background: #f5f5f5; border-radius: 8px;
+    padding: 8px 16px; display: inline-block;
+    margin: 12px 0; color: #444;
+}
+
+/* ── Error ── */
+.pg-error-circle {
+    width: 90px; height: 90px; border-radius: 50%;
+    background: linear-gradient(135deg,#e53935,#ff8a65);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 8px 30px rgba(229,57,53,.3);
+    animation: errorShake .4s ease both;
+}
+@@keyframes errorShake {
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-8px);}
+    40%{transform:translateX(8px);}
+    60%{transform:translateX(-6px);}
+    80%{transform:translateX(6px);}
+}
+.pg-secure-badge {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; font-size: 11px; color: #888;
+    margin-top: 20px; padding-top: 16px;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* ── Modo Oscuro Overrides ── */
+[data-bs-theme="dark"] .pasarela-box {
+    background: #1a1c2e;
+    color: #f1f5f9;
+    box-shadow: 0 32px 80px rgba(0,0,0,.7);
+}
+[data-bs-theme="dark"] .pg-bank-name { color: #f8fafc !important; }
+[data-bs-theme="dark"] .pg-bank-header { border-bottom-color: #2e3248 !important; }
+[data-bs-theme="dark"] .pg-secure-badge { border-top-color: #2e3248 !important; color: #94a3b8 !important; }
+[data-bs-theme="dark"] .pg-approval-code { background: #25283d !important; color: #69f0ae !important; }
+[data-bs-theme="dark"] .pg-step { background: #25283d !important; color: #94a3b8 !important; }
+[data-bs-theme="dark"] .pg-step.done { background: rgba(46,125,50,.35) !important; color: #a5d6a7 !important; }
+[data-bs-theme="dark"] .pg-step.active { background: rgba(13,110,253,.35) !important; color: #90caf9 !important; }
+[data-bs-theme="dark"] #infoSupergiros {
+    background: rgba(245, 158, 11, 0.18) !important;
+    border-color: rgba(245, 158, 11, 0.45) !important;
+    color: #fef08a !important;
+}
+[data-bs-theme="dark"] #infoSupergiros .text-muted,
+[data-bs-theme="dark"] #infoSupergiros small,
+[data-bs-theme="dark"] #infoSupergiros p {
+    color: #fef08a !important;
+}
+[data-bs-theme="dark"] #infoContraentrega {
+    background: rgba(16, 185, 129, 0.18) !important;
+    border-color: rgba(16, 185, 129, 0.45) !important;
+    color: #a7f3d0 !important;
+}
+[data-bs-theme="dark"] #infoContraentrega .text-muted,
+[data-bs-theme="dark"] #infoContraentrega small,
+[data-bs-theme="dark"] #infoContraentrega p {
+    color: #a7f3d0 !important;
+}
+
+/* ── Botones de propina ── */
+.btn-propina {
+    font-size: 11.5px;
+    font-weight: 600;
+    transition: all .15s ease;
+    cursor: pointer;
+}
+.btn-propina.active {
+    background-color: var(--primary, #0d6efd) !important;
+    color: #fff !important;
+    border-color: var(--primary, #0d6efd) !important;
+}
+</style>
+
+<div class="container-fluid px-3 px-lg-5">
+
+    <!-- Encabezado -->
+    <div class="tienda-page-header">
+        <div>
+            <h1>
+                <i class="bi bi-bag-check-fill text-primary"></i>
+                <span>Confirmar Pedido</span>
+            </h1>
+            <p class="text-muted small mb-0">Revisa tu pedido, elige el método de pago y confirma</p>
+        </div>
+        <a href="/Tienda/Carrito" class="tienda-back-btn">
+            <i class="bi bi-arrow-left"></i>
+            <span>Volver al Carrito</span>
+        </a>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm rounded-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>@TempData["Error"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+
+        <!-- ── Columna izquierda ── -->
+        <div class="col-lg-7">
+
+            <!-- Productos seleccionados -->
+            <div class="carrito-wrap mb-4">
+                <div class="pedido-card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-bag text-primary"></i>
+                    <span class="fw-bold fs-6">Productos del Pedido</span>
+                    <span class="badge bg-primary-subtle text-primary ms-auto" id="badgeTotalProductosCheckout">@Model.Count producto(s)</span>
+                    <a href="/Tienda/Catalogo" class="btn btn-xs btn-outline-primary rounded-pill py-1 px-2 d-inline-flex align-items-center gap-1" style="font-size:11.5px;">
+                        <i class="bi bi-plus-circle"></i> Agregar más
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="checkout-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th style="width: 130px; text-align:center;">Cant.</th>
+                                <th style="text-align:right;">Precio</th>
+                                <th style="text-align:right;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var imgUrl = !string.IsNullOrEmpty(item.Imagen)
+                                    ? (item.Imagen.StartsWith("http") ? item.Imagen : (item.Imagen.StartsWith("/") ? item.Imagen : "/" + item.Imagen))
+                                    : "";
+                                <tr id="checkoutRow-@item.ProductoId"
+                                    data-producto-id="@item.ProductoId"
+                                    data-precio="@item.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                    data-cant="@item.Cantidad"
+                                    data-stock="@item.StockDisponible"
+                                    data-limite="@(item.LimiteMaximoPorPedido?.ToString() ?? "")"
+                                    data-subtotal="@item.Subtotal.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if (!string.IsNullOrEmpty(imgUrl))
+                                            {
+                                                <img src="@imgUrl" alt="@item.Nombre" class="checkout-img"
+                                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                                <div class="checkout-img d-none align-items-center justify-content-center text-muted"
+                                                     style="background:var(--bg-muted);border-radius:8px;">
+                                                    <i class="bi bi-capsule"></i>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="checkout-img d-flex align-items-center justify-content-center text-muted"
+                                                     style="background:var(--bg-muted);border-radius:8px;">
+                                                    <i class="bi bi-capsule"></i>
+                                                </div>
+                                            }
+                                            <div>
+                                                <span class="carrito-item-name d-block">@item.Nombre</span>
+                                                @if (item.LimiteMaximoPorPedido.HasValue && item.LimiteMaximoPorPedido.Value > 0)
+                                                {
+                                                    <small class="text-muted" style="font-size:11px;">Máx. @item.LimiteMaximoPorPedido.Value /pedido</small>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="text-align:center;" class="text-nowrap">
+                                        <div class="d-inline-flex align-items-center justify-content-center gap-1 border rounded-pill px-2 py-1" style="background:var(--bg-muted);">
+                                            <button type="button" class="btn btn-sm p-0 text-secondary border-0"
+                                                    style="width:20px;height:20px;line-height:1;display:flex;align-items:center;justify-content:center;"
+                                                    title="Disminuir cantidad"
+                                                    onclick="ajustarCantCheckout('@item.ProductoId', -1)"
+                                                    id="btnDecCheckout-@item.ProductoId"
+                                                    @(item.Cantidad <= 1 ? "disabled" : "")>
+                                                <i class="bi bi-dash"></i>
+                                            </button>
+                                            <span class="fw-bold px-1" style="min-width:22px; font-size:13px;" id="cantCheckout-@item.ProductoId">@item.Cantidad</span>
+                                            <button type="button" class="btn btn-sm p-0 text-primary border-0"
+                                                    style="width:20px;height:20px;line-height:1;display:flex;align-items:center;justify-content:center;"
+                                                    title="Aumentar cantidad"
+                                                    onclick="ajustarCantCheckout('@item.ProductoId', 1)"
+                                                    id="btnIncCheckout-@item.ProductoId"
+                                                    @(item.Cantidad >= item.MaximoPermitido ? "disabled" : "")>
+                                                <i class="bi bi-plus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td style="text-align:right;" class="text-nowrap">$@item.Precio.ToString("N2")</td>
+                                    <td style="text-align:right;" class="text-nowrap fw-semibold" id="subtotalCheckout-@item.ProductoId">
+                                        $@item.Subtotal.ToString("N2")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Dirección de entrega -->
+            <div class="carrito-wrap mb-4 p-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-geo-alt-fill text-danger fs-5"></i>
+                    <span class="fw-bold">Dirección de Entrega</span>
+                </div>
+                @{
+                    var partesDireccion = direccion.Split('|');
+                    var nombreContacto  = partesDireccion.Length > 0 ? partesDireccion[0].Trim() : "";
+                    var dirTexto        = partesDireccion.Length > 1 ? partesDireccion[1].Trim() : direccion;
+                    var telTexto        = partesDireccion.Length > 2 ? partesDireccion[2].Trim() : "";
+                }
+                <div class="rounded-3 p-3" style="background:var(--bg-muted);border:1px solid var(--border);">
+                    @if (!string.IsNullOrEmpty(nombreContacto))
+                    {
+                        <div class="fw-semibold small mb-1">@nombreContacto</div>
+                    }
+                    <div class="text-muted small">@dirTexto</div>
+                    @if (!string.IsNullOrEmpty(telTexto))
+                    {
+                        <div class="text-muted small mt-1">
+                            <i class="bi bi-telephone me-1"></i>@telTexto
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- ═══════ MÉTODO DE PAGO ═══════ -->
+            <div class="carrito-wrap p-3">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-credit-card-2-front-fill text-success fs-5"></i>
+                    <span class="fw-bold">Método de Pago</span>
+                    <span class="text-danger ms-1">*</span>
+                </div>
+
+                <div class="d-flex flex-column gap-3">
+
+                    <!-- ── Tarjeta débito / crédito ── -->
+                    <div class="pago-card" id="cardTarjeta" onclick="seleccionarPago('tarjeta', this)">
+                        <input type="radio" name="_pago" value="tarjeta" id="radioPagoTarjeta" />
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="pago-check"></div>
+                            <div class="d-flex align-items-center gap-3 flex-grow-1">
+                                <i class="bi bi-credit-card-fill fs-3 text-primary"></i>
+                                <div>
+                                    <div class="fw-semibold">Tarjeta Débito o Crédito</div>
+                                    <div class="text-muted" style="font-size:12px;">Visa, Mastercard</div>
+                                </div>
+                                <div class="ms-auto d-flex gap-2 align-items-center">
+                                    <!-- Logo Visa SVG inline -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 500" style="height:22px;" role="img" aria-label="Visa">
+                                        <rect width="780" height="500" rx="40" fill="#1a1f71"/>
+                                        <path d="M293.2 348.7l33.4-195h53.4l-33.4 195zM501.6 157.4c-10.6-3.9-27.2-8.1-48-8.1-52.8 0-90 26.5-90.3 64.4-.3 28 26.6 43.6 46.9 52.9 20.8 9.5 27.8 15.6 27.7 24.1-.1 13-16.6 18.9-32 18.9-21.4 0-32.7-2.9-50.3-10.1l-6.9-3.1-7.5 43.4c12.5 5.4 35.6 10.1 59.6 10.3 56.2 0 92.7-26.2 93.1-66.8.2-22.2-14.1-39.1-45-53-18.8-9-30.3-15-30.2-24.1 0-8.1 9.7-16.7 30.8-16.7 17.5-.3 30.2 3.5 40.1 7.5l4.8 2.2 7.2-41.8zM609 153.7h-41.3c-12.8 0-22.4 3.5-28 16.2l-79.4 178.8h56.1s9.2-24 11.2-29.3l68.5.1c1.6 6.8 6.5 29.2 6.5 29.2h49.6L609 153.7zm-65.6 123.7c4.4-11.2 21.3-54.6 21.3-54.6-.3.5 4.4-11.3 7.1-18.6l3.6 16.8s10.2 46.4 12.4 56.4h-44.4zM233.5 153.7l-52.4 133-5.6-27c-9.8-31.3-40.2-65.3-74.2-82.3l47.8 171h56.5l84-194.7h-56.1z" fill="#fff"/>
+                                        <path d="M152.3 153.7H65.5l-.7 4c67.2 16.2 111.7 55.3 130.2 102.3l-18.8-89.7c-3.2-12.4-12.7-16.2-24-16.6z" fill="#f9a533"/>
+                                    </svg>
+                                    <!-- Logo Mastercard SVG inline -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152.4 108" style="height:22px;" role="img" aria-label="Mastercard">
+                                        <rect width="152.4" height="108" rx="8" fill="#252525"/>
+                                        <circle cx="60.2" cy="54" r="28" fill="#eb001b"/>
+                                        <circle cx="92.2" cy="54" r="28" fill="#f79e1b"/>
+                                        <path d="M76.2 32.1a28 28 0 0 1 0 43.8 28 28 0 0 1 0-43.8z" fill="#ff5f00"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sub-opciones: débito o crédito -->
+                        <div class="sub-metodos flex-column flex-sm-row" id="subTarjeta">
+                            <div class="sub-btn sel" id="subDebito" onclick="seleccionarSubTarjeta(event,'debito')">
+                                <i class="bi bi-wallet2 me-1"></i> Débito
+                            </div>
+                            <div class="sub-btn" id="subCredito" onclick="seleccionarSubTarjeta(event,'credito')">
+                                <i class="bi bi-credit-card me-1"></i> Crédito
+                            </div>
+                        </div>
+
+                        <!-- ── FORMULARIO DE TARJETA ── -->
+                        <div id="formTarjeta" onclick="event.stopPropagation()">
+
+                            <!-- Visualizador -->
+                            <div class="card-preview" id="cardPreview">
+                                <div class="card-brand-badge">
+                                    <span id="pvBrand">•••• ••••</span>
+                                    <img id="pvLogo" src="" alt="" style="height:28px; display:none;" />
+                                </div>
+                                <div class="card-number-preview" id="pvNumber">•••• •••• •••• ••••</div>
+                                <div class="card-meta">
+                                    <div>
+                                        <div class="card-meta-label">Titular</div>
+                                        <div id="pvName" style="font-size:13px; font-weight:600;">NOMBRE TITULAR</div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div class="card-meta-label">Vence</div>
+                                        <div id="pvExp" style="font-size:13px; font-weight:600;">MM/AA</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Campos -->
+                            <div class="row g-3">
+                                <!-- Número de tarjeta -->
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small">
+                                        Número de Tarjeta <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-card-wrap">
+                                        <input type="text" id="tcNumero" name="tarjeta_numero"
+                                               class="form-control pe-5" maxlength="19"
+                                               placeholder="0000 0000 0000 0000"
+                                               inputmode="numeric" autocomplete="cc-number"
+                                               oninput="formatCardNumber(this)"
+                                               onkeypress="return /\d/.test(event.key)" />
+                                        <span class="card-brand-icon" id="brandIcon">
+                                            <i class="bi bi-credit-card text-muted"></i>
+                                        </span>
+                                    </div>
+                                    <div class="invalid-feedback" id="errNumero"></div>
+                                </div>
+
+                                <!-- Nombre del titular -->
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold small">
+                                        Nombre del Titular <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="tcNombre" name="tarjeta_titular"
+                                           class="form-control" maxlength="60"
+                                           placeholder="Tal como aparece en la tarjeta"
+                                           autocomplete="cc-name"
+                                           oninput="document.getElementById('pvName').textContent = this.value.toUpperCase() || 'NOMBRE TITULAR'" />
+                                    <div class="invalid-feedback" id="errNombre"></div>
+                                </div>
+
+                                <!-- Vencimiento + CVV -->
+                                <div class="col-sm-6">
+                                    <label class="form-label fw-semibold small">
+                                        Fecha de Vencimiento <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="tcFecha" name="tarjeta_vencimiento"
+                                           class="form-control" maxlength="5"
+                                           placeholder="MM/AA" inputmode="numeric"
+                                           autocomplete="cc-exp"
+                                           oninput="formatExpiry(this)"
+                                           onkeypress="return /[\d\/]/.test(event.key)" />
+                                    <div class="invalid-feedback" id="errFecha"></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label fw-semibold small">
+                                        Código de Seguridad (CVV) <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="password" id="tcCvv" name="tarjeta_cvv"
+                                           class="form-control" maxlength="4"
+                                           placeholder="•••"
+                                           inputmode="numeric" autocomplete="cc-csc"
+                                           onkeypress="return /\d/.test(event.key)" />
+                                    <div class="invalid-feedback" id="errCvv"></div>
+                                </div>
+
+                                <!-- Tipo de documento -->
+                                <div class="col-sm-5">
+                                    <label class="form-label fw-semibold small">
+                                        Tipo de Documento <span class="text-danger">*</span>
+                                    </label>
+                                    <select id="tcTipoDoc" name="tarjeta_tipo_documento" class="form-select">
+                                        <option value="">-- Selecciona --</option>
+                                        <option value="CC">Cédula de Ciudadanía (CC)</option>
+                                        <option value="CE">Cédula de Extranjería (CE)</option>
+                                        <option value="PA">Pasaporte (PA)</option>
+                                        <option value="NIT">NIT</option>
+                                        <option value="TI">Tarjeta de Identidad (TI)</option>
+                                    </select>
+                                    <div class="invalid-feedback" id="errTipoDoc"></div>
+                                </div>
+
+                                <!-- Número de documento -->
+                                <div class="col-sm-7">
+                                    <label class="form-label fw-semibold small">
+                                        Número de Documento <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="tcDocumento" name="tarjeta_documento"
+                                           class="form-control" maxlength="15"
+                                           placeholder="Número de documento"
+                                           inputmode="numeric"
+                                           onkeypress="return /[\d\-]/.test(event.key)" />
+                                    <div class="invalid-feedback" id="errDocumento"></div>
+                                </div>
+                            </div>
+                        </div><!-- /formTarjeta -->
+                    </div><!-- /pago-card tarjeta -->
+
+                    <!-- ── Supergiros ── -->
+                    <div class="pago-card" id="cardSupergiros" onclick="seleccionarPago('supergiros', this)">
+                        <input type="radio" name="_pago" value="supergiros" id="radioPagoSupergiros" />
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="pago-check"></div>
+                            <i class="bi bi-building fs-3 text-warning"></i>
+                            <div>
+                                <div class="fw-semibold">Supergiros</div>
+                                <div class="text-muted" style="font-size:12px;">Pago en efectivo en puntos Supergiros</div>
+                            </div>
+                            <span class="badge bg-warning-subtle text-warning ms-auto">Efectivo</span>
+                        </div>
+                        <!-- Box informativo Supergiros -->
+                        <div id="infoSupergiros" class="mt-3 p-3 rounded-3 bg-warning-subtle border border-warning" style="display:none;" onclick="event.stopPropagation()">
+                            <div class="fw-bold mb-1"><i class="bi bi-info-circle-fill text-warning me-1"></i> Instrucciones de Pago Supergiros</div>
+                            <p class="small mb-2">Para realizar el pago en cualquier punto Supergiros, debes dirígete siempre con tu <strong>cédula de ciudadanía original</strong> y tu código de pago permanente:</p>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="small">Tu Código de Pago Fijo:</span>
+                                <span class="badge bg-warning text-dark font-monospace fs-6 px-3 py-2">@(ViewBag.SupergirosCode ?? "SG-XXXXXXXX")</span>
+                            </div>
+                            <small class="d-block mt-2 opacity-75" style="font-size: 11px;">* Este código siempre será el mismo para todas tus compras con Supergiros.</small>
+                        </div>
+                    </div>
+
+                    <!-- ── Pago Contra entrega ── -->
+                    <div class="pago-card" id="cardContraentrega" onclick="seleccionarPago('contraentrega', this)">
+                        <input type="radio" name="_pago" value="contraentrega" id="radioPagoContraentrega" />
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="pago-check"></div>
+                            <i class="bi bi-cash-stack fs-3 text-success"></i>
+                            <div>
+                                <div class="fw-semibold">Pago Contra entrega</div>
+                                <div class="text-muted" style="font-size:12px;">Paga en efectivo al recibir tu pedido</div>
+                            </div>
+                            <span class="badge bg-success-subtle text-success ms-auto">Efectivo al recibir</span>
+                        </div>
+                        <!-- Box informativo Contraentrega -->
+                        <div id="infoContraentrega" class="mt-3 p-3 rounded-3 bg-success-subtle border border-success" style="display:none;" onclick="event.stopPropagation()">
+                            <div class="fw-bold mb-1"><i class="bi bi-truck text-success me-1"></i> Instrucciones de Pago Contra entrega</div>
+                            <p class="small mb-0">Pagas directamente en efectivo al repartidor al recibir tu compra. Al confirmar tu pedido se generará un <strong>código de seguridad único</strong> que deberás entregar al domiciliario para confirmar la entrega.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="errorPago" class="text-danger small mt-2" style="display:none;">
+                    <i class="bi bi-exclamation-circle me-1"></i>Selecciona un método de pago.
+                </div>
+            </div>
+
+        </div><!-- /col-lg-7 -->
+
+        <!-- ── Resumen del pedido ── -->
+        <div class="col-lg-5">
+            <div class="pedido-card" style="position:sticky; top:20px;">
+                <div class="pedido-card-header">
+                    <span class="fw-bold fs-6">Resumen del Pedido</span>
+                    <i class="bi bi-receipt text-primary"></i>
+                </div>
+                <div class="pedido-card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Subtotal (@Model.Count producto(s))</span>
+                        <span class="fw-semibold" id="resumenSubtotalVal">$@subtotal.ToString("N2")</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="text-muted">Envío</span>
+                            @if (costoEnvio == 0)
+                            {
+                                <span class="badge bg-success-subtle text-success small" style="font-size:10px;">&gt; $45.000</span>
+                            }
+                        </div>
+                        <span id="resumenEnvioVal" class="@(costoEnvio == 0 ? "text-success fw-semibold" : "fw-semibold")">
+                            @(costoEnvio == 0 ? "Gratis" : "$" + costoEnvio.ToString("N2"))
+                        </span>
+                    </div>
+
+                    <div id="bannerEnvioCheckout" class="alert @(costoEnvio == 0 ? "alert-success" : "alert-warning") py-1 px-2 mb-3 d-flex align-items-center gap-2" style="font-size: 11.5px;">
+                        @if (costoEnvio == 0)
+                        {
+                            <i class="bi bi-truck text-success fs-6"></i>
+                            <div><strong>¡Envío Gratis!</strong> Por compra mayor a $45.000.</div>
+                        }
+                        else
+                        {
+                            <i class="bi bi-info-circle-fill text-warning fs-6"></i>
+                            <div>Envío estándar <strong>$8.000</strong> (Gratis en compras superiores a $45.000).</div>
+                        }
+                    </div>
+
+                    <!-- ── Propina voluntaria ── -->
+                    <div class="p-3 rounded-3 mb-3" style="background:var(--bg-muted); border:1px solid var(--border);">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-semibold small d-flex align-items-center gap-1">
+                                <i class="bi bi-heart-fill text-danger"></i> Propina al repartidor
+                            </span>
+                            <span class="fw-bold small text-primary" id="resumenPropinaBadge">
+                                @(propinaInicial == 0 ? "$0.00 (Sin propina)" : "$" + propinaInicial.ToString("N2"))
+                            </span>
+                        </div>
+                        <p class="text-muted mb-2" style="font-size: 11px;">
+                            Agradece el servicio de tu domiciliario. Puedes modificar el valor o dejarlo en $0:
+                        </p>
+                        <div class="input-group input-group-sm mb-2">
+                            <span class="input-group-text fw-bold">$</span>
+                            <input type="number" id="inputPropina" class="form-control fw-semibold"
+                                   value="@((int)propinaInicial)" min="0" max="500000" step="500" placeholder="0"
+                                   onkeydown="prevenirTeclasInvalidasPropina(event)"
+                                   oninput="onPropinaInputChange(this)"
+                                   onblur="onPropinaBlur(this)" />
+                        </div>
+                        <div id="errPropinaMsg" class="text-danger small mb-2" style="font-size:11px; display:none;">
+                            <i class="bi bi-exclamation-circle me-1"></i>La propina no puede ser negativa ni superar $500,000 COP.
+                        </div>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-propina @(propinaInicial == 0 ? "active" : "")" onclick="setPropina(0)">$0</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2 btn-propina @(propinaInicial == 1000 ? "active" : "")" onclick="setPropina(1000)">$1,000</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2 btn-propina @(propinaInicial == 2000 ? "active" : "")" onclick="setPropina(2000)">$2,000</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2 btn-propina @(propinaInicial == 3000 ? "active" : "")" onclick="setPropina(3000)">$3,000</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2 btn-propina @(propinaInicial == 5000 ? "active" : "")" onclick="setPropina(5000)">$5,000</button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Impuestos incluidos</span>
+                        <span class="text-muted">$0.00</span>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="fw-bold fs-5">Total a Pagar</span>
+                        <span class="carrito-total-amount" id="resumenTotalAPagar">$@total.ToString("N2")</span>
+                    </div>
+
+                    <!-- Resumen método seleccionado -->
+                    <div id="resumenPago" class="rounded-3 p-3 mb-3"
+                         style="background:var(--bg-muted);border:1px dashed var(--border);display:none;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <span class="small fw-semibold" id="resumenPagoTexto"></span>
+                        </div>
+                    </div>
+
+                    <!-- Formulario de confirmación -->
+                    <form id="formConfirmar" method="post" action="/Tienda/RealizarPedido"
+                          onsubmit="return confirmarPedido()">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="direccionEntrega" value="@direccion" />
+                        <input type="hidden" name="metodoPago"        id="hdnMetodoPago" />
+                        <input type="hidden" name="propina"           id="hdnPropina" value="@((int)propinaInicial)" />
+                        <input type="hidden" name="marcaTarjeta"      id="hdnMarcaTarjeta" />
+                        <!-- Campos de tarjeta que se copian al form principal al confirmar -->
+                        <input type="hidden" name="tarjeta_numero"           id="hdnTarjetaNumero" />
+                        <input type="hidden" name="tarjeta_titular"          id="hdnTarjetaTitular" />
+                        <input type="hidden" name="tarjeta_vencimiento"      id="hdnTarjetaVencimiento" />
+                        <input type="hidden" name="tarjeta_cvv"              id="hdnTarjetaCvv" />
+                        <input type="hidden" name="tarjeta_tipo_documento"   id="hdnTarjetaTipoDoc" />
+                        <input type="hidden" name="tarjeta_documento"        id="hdnTarjetaDocumento" />
+                        @foreach (var item in Model)
+                        {
+                            <input type="hidden" name="productosSeleccionados" value="@item.ProductoId" />
+                        }
+                        <button type="submit"
+                                class="btn btn-success w-100 py-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-bag-check-fill fs-5"></i>
+                            <span>Confirmar y Realizar Pedido</span>
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <small class="text-muted d-flex align-items-center justify-content-center gap-1">
+                            <i class="bi bi-shield-lock-fill text-success"></i> Compra segura y garantizada
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MODAL PASARELA DE PAGO SIMULADA
+══════════════════════════════════════════════ -->
+<div id="pasarelaOverlay" role="dialog" aria-modal="true" aria-label="Pasarela de pago">
+    <div class="pasarela-box">
+
+        <!-- Header banco -->
+        <div class="pg-bank-header">
+            <div class="pg-bank-logo"><i class="bi bi-shield-lock-fill"></i></div>
+            <div class="pg-bank-name">
+                PaySecure Gateway
+                <small>Transacción cifrada SSL 256-bit</small>
+            </div>
+        </div>
+
+        <!-- ── PANTALLA 1: Procesando ── -->
+        <div class="pg-screen active" id="pgProcessing">
+            <div class="pg-spinner-wrap">
+                <svg viewBox="0 0 90 90" width="90" height="90">
+                    <defs>
+                        <linearGradient id="pgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#0d6efd"/>
+                            <stop offset="100%" stop-color="#6610f2"/>
+                        </linearGradient>
+                    </defs>
+                    <circle class="pg-spinner-track" cx="45" cy="45" r="38"/>
+                    <circle class="pg-spinner-arc" cx="45" cy="45" r="38"/>
+                </svg>
+                <div class="pg-spinner-icon"><i class="bi bi-credit-card-2-front-fill"></i></div>
+            </div>
+
+            <h5 class="fw-bold mb-1">Procesando pago</h5>
+            <p class="text-muted small mb-0" id="pgStatusText">Conectando con la red bancaria...</p>
+
+            <div class="pg-progress-wrap">
+                <div class="pg-progress-bar-bg">
+                    <div class="pg-progress-bar-fill" id="pgProgressFill"></div>
+                </div>
+            </div>
+
+            <div class="pg-steps">
+                <div class="pg-step active" id="pgStep1"><i class="bi bi-lock-fill"></i> Autenticando</div>
+                <div class="pg-step" id="pgStep2"><i class="bi bi-bank"></i> Verificando</div>
+                <div class="pg-step" id="pgStep3"><i class="bi bi-check2-circle"></i> Confirmando</div>
+            </div>
+        </div>
+
+        <!-- ── PANTALLA 2: Éxito ── -->
+        <div class="pg-screen" id="pgSuccess">
+            <div class="pg-success-circle">
+                <i class="bi bi-check-lg pg-check-icon"></i>
+            </div>
+            <h5 class="fw-bold mb-1 text-success">¡Pago Aprobado!</h5>
+            <p class="text-muted small">Tu transacción fue procesada exitosamente.</p>
+            <div class="pg-approval-code" id="pgApprovalCode">COD: ─────────</div>
+            <p class="small text-muted mb-0">Redirigiendo a confirmación del pedido...</p>
+        </div>
+
+        <!-- PANTALLA 3: Error -->
+        <div class="pg-screen" id="pgError">
+            <div class="pg-error-circle">
+                <i class="bi bi-x-lg" style="font-size:38px;color:#fff;"></i>
+            </div>
+            <h5 class="fw-bold mb-1 text-danger">Pago Rechazado</h5>
+            <p class="text-muted small" id="pgErrorMsg">No se pudo procesar el pago.</p>
+            <div class="d-flex gap-2 justify-content-center mt-3">
+                <button class="btn btn-outline-secondary btn-sm rounded-pill px-4"
+                        onclick="cerrarPasarela()">Cancelar</button>
+                <button class="btn btn-primary btn-sm rounded-pill px-4"
+                        onclick="reintentarPago()">Reintentar</button>
+            </div>
+        </div>
+
+        <!-- Badge seguridad -->
+        <div class="pg-secure-badge">
+            <i class="bi bi-shield-check text-success"></i>
+            Conexión segura · Datos cifrados · PCI DSS
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+// Estado
+let metodoPagoSeleccionado = null;   // 'tarjeta-debito' | 'tarjeta-credito' | 'supergiros'
+let subTarjetaSel          = 'debito';
+let marcaDetectada         = '';     // 'visa' | 'mastercard' | ''
+
+// ── Propina, Envío y Totales dinámicos ──
+let _subtotalPedido = @subtotal.ToString(System.Globalization.CultureInfo.InvariantCulture);
+let _envioPedido    = @costoEnvio.ToString(System.Globalization.CultureInfo.InvariantCulture);
+let _propinaPedido  = @propinaInicial.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+function formatCOP(val) {
+    return '$' + Number(val).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+function recalcularTotalCheckout(syncInput = false) {
+    // Validar propina
+    if (_propinaPedido < 0) _propinaPedido = 0;
+    if (_propinaPedido > 500000) _propinaPedido = 500000;
+
+    // Calcular costo de envío dinámico según subtotal: >= 45.000 es gratis ($0), sino $8.000
+    _envioPedido = (_subtotalPedido >= 45000) ? 0 : 8000;
+
+    const total = _subtotalPedido + _envioPedido + _propinaPedido;
+    const totalEl = document.getElementById('resumenTotalAPagar');
+    if (totalEl) totalEl.textContent = formatCOP(total);
+
+    const subtotalEl = document.getElementById('resumenSubtotalVal');
+    if (subtotalEl) subtotalEl.textContent = formatCOP(_subtotalPedido);
+
+    const envioValEl = document.getElementById('resumenEnvioVal');
+    if (envioValEl) {
+        if (_envioPedido === 0) {
+            envioValEl.className = 'text-success fw-semibold';
+            envioValEl.textContent = 'Gratis';
+        } else {
+            envioValEl.className = 'fw-semibold';
+            envioValEl.textContent = formatCOP(_envioPedido);
+        }
+    }
+
+    const badgePropina = document.getElementById('resumenPropinaBadge');
+    if (badgePropina) {
+        badgePropina.textContent = _propinaPedido === 0 ? '$0.00 (Sin propina)' : formatCOP(_propinaPedido);
+    }
+
+    const hdnPropina = document.getElementById('hdnPropina');
+    if (hdnPropina) hdnPropina.value = Math.max(0, Math.round(_propinaPedido));
+
+    if (syncInput) {
+        const inputPropina = document.getElementById('inputPropina');
+        if (inputPropina) inputPropina.value = Math.round(_propinaPedido);
+    }
+
+    // Actualizar banner de envío en tiempo real
+    const bannerEnvio = document.getElementById('bannerEnvioCheckout');
+    if (bannerEnvio) {
+        if (_subtotalPedido >= 45000) {
+            bannerEnvio.className = 'alert alert-success py-1 px-2 mb-3 d-flex align-items-center gap-2 small';
+            bannerEnvio.innerHTML = '<i class="bi bi-truck text-success fs-6"></i><div><strong>¡Envío Gratis!</strong> Por compra mayor a $45.000.</div>';
+        } else {
+            const falta = 45000 - _subtotalPedido;
+            bannerEnvio.className = 'alert alert-warning py-1 px-2 mb-3 d-flex align-items-center gap-2 small';
+            bannerEnvio.innerHTML = `<i class="bi bi-info-circle-fill text-warning fs-6"></i><div>Envío estándar <strong>$8.000</strong> (¡Agrega <strong>${formatCOP(falta)}</strong> más para envío gratis!).</div>`;
+        }
+    }
+
+    // Sincronizar botones de propina activos
+    document.querySelectorAll('.btn-propina').forEach(btn => {
+        const txt = btn.textContent.replace(/[^\d]/g, '');
+        const val = parseInt(txt, 10) || 0;
+        if (val === Math.round(_propinaPedido)) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+// ── Validación de campo de propina ──
+function prevenirTeclasInvalidasPropina(e) {
+    if (['-', '+', 'e', 'E'].includes(e.key)) {
+        e.preventDefault();
+    }
+}
+
+function onPropinaInputChange(input) {
+    const errEl = document.getElementById('errPropinaMsg');
+    let rawVal = input.value;
+    
+    // Si contiene signo negativo o caracteres inválidos
+    if (rawVal.includes('-')) {
+        rawVal = rawVal.replace(/-/g, '');
+        input.value = rawVal;
+    }
+
+    if (rawVal === '') {
+        _propinaPedido = 0;
+        if (errEl) errEl.style.display = 'none';
+        recalcularTotalCheckout(false);
+        return;
+    }
+
+    let num = parseInt(rawVal, 10);
+    if (isNaN(num) || num < 0) {
+        num = 0;
+        input.value = 0;
+    }
+
+    if (num > 500000) {
+        num = 500000;
+        input.value = 500000;
+        if (errEl) errEl.style.display = 'block';
+    } else {
+        if (errEl) errEl.style.display = 'none';
+    }
+
+    _propinaPedido = num;
+    recalcularTotalCheckout(false);
+}
+
+function onPropinaBlur(input) {
+    const errEl = document.getElementById('errPropinaMsg');
+    if (errEl) errEl.style.display = 'none';
+
+    let rawVal = input.value.trim();
+    if (rawVal === '' || isNaN(parseInt(rawVal, 10))) {
+        input.value = 0;
+        _propinaPedido = 0;
+    } else {
+        let num = Math.max(0, parseInt(rawVal, 10));
+        if (num > 500000) num = 500000;
+        input.value = num;
+        _propinaPedido = num;
+    }
+    recalcularTotalCheckout(true);
+}
+
+function setPropina(val) {
+    const errEl = document.getElementById('errPropinaMsg');
+    if (errEl) errEl.style.display = 'none';
+
+    val = Math.max(0, parseInt(val, 10) || 0);
+    if (val > 500000) val = 500000;
+    _propinaPedido = val;
+    const input = document.getElementById('inputPropina');
+    if (input) input.value = val;
+    recalcularTotalCheckout(true);
+}
+
+// ── Ajustar cantidad directamente desde el Checkout ──
+async function ajustarCantCheckout(productoId, delta) {
+    const row = document.getElementById(`checkoutRow-${productoId}`);
+    if (!row) return;
+
+    let cantActual = parseInt(row.getAttribute('data-cant'), 10) || 1;
+    const stock = parseInt(row.getAttribute('data-stock'), 10) || 99;
+    const limite = parseInt(row.getAttribute('data-limite'), 10);
+    const maxPermitido = (!isNaN(limite) && limite > 0) ? Math.min(stock, limite) : stock;
+    const precio = parseFloat(row.getAttribute('data-precio')) || 0;
+
+    const nuevaCant = cantActual + delta;
+    if (nuevaCant < 1 || nuevaCant > maxPermitido) return;
+
+    // Actualizar atributos y celdas
+    row.setAttribute('data-cant', nuevaCant);
+    const nuevoSubtotal = nuevaCant * precio;
+    row.setAttribute('data-subtotal', nuevoSubtotal);
+
+    const cantEl = document.getElementById(`cantCheckout-${productoId}`);
+    if (cantEl) cantEl.textContent = nuevaCant;
+
+    const subEl = document.getElementById(`subtotalCheckout-${productoId}`);
+    if (subEl) subEl.textContent = formatCOP(nuevoSubtotal);
+
+    const btnDec = document.getElementById(`btnDecCheckout-${productoId}`);
+    const btnInc = document.getElementById(`btnIncCheckout-${productoId}`);
+    if (btnDec) btnDec.disabled = (nuevaCant <= 1);
+    if (btnInc) btnInc.disabled = (nuevaCant >= maxPermitido);
+
+    // Sumar subtotales de todas las filas en el checkout
+    let sumSubtotal = 0;
+    document.querySelectorAll('tr[id^="checkoutRow-"]').forEach(r => {
+        sumSubtotal += parseFloat(r.getAttribute('data-subtotal')) || 0;
+    });
+
+    _subtotalPedido = sumSubtotal;
+
+    // Recalcular envío, totales y actualizar interfaz automáticamente
+    recalcularTotalCheckout(false);
+
+    // Sincronizar cantidad con el carrito en servidor mediante AJAX
+    try {
+        const formData = new FormData();
+        formData.append('productoId', productoId);
+        formData.append('cantidad', nuevaCant);
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+        if (token) formData.append('__RequestVerificationToken', token);
+        await fetch('/Tienda/ActualizarCantidad', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        });
+    } catch (e) {
+        console.error('Error al sincronizar cantidad en servidor:', e);
+    }
+}
+
+// Detectar marca de tarjeta
+function detectarMarca(numero) {
+    const limpio = numero.replace(/\s/g, '');
+    if (/^4/.test(limpio))                          return 'visa';
+    if (/^5[1-5]|^2[2-7]/.test(limpio))            return 'mastercard';
+    return '';
+}
+
+// Logos SVG 
+const LOGOS = {
+    visa: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 500" style="height:28px;" role="img" aria-label="Visa">
+        <path d="M293.2 348.7l33.4-195h53.4l-33.4 195zM501.6 157.4c-10.6-3.9-27.2-8.1-48-8.1-52.8 0-90 26.5-90.3 64.4-.3 28 26.6 43.6 46.9 52.9 20.8 9.5 27.8 15.6 27.7 24.1-.1 13-16.6 18.9-32 18.9-21.4 0-32.7-2.9-50.3-10.1l-6.9-3.1-7.5 43.4c12.5 5.4 35.6 10.1 59.6 10.3 56.2 0 92.7-26.2 93.1-66.8.2-22.2-14.1-39.1-45-53-18.8-9-30.3-15-30.2-24.1 0-8.1 9.7-16.7 30.8-16.7 17.5-.3 30.2 3.5 40.1 7.5l4.8 2.2 7.2-41.8zM609 153.7h-41.3c-12.8 0-22.4 3.5-28 16.2l-79.4 178.8h56.1s9.2-24 11.2-29.3l68.5.1c1.6 6.8 6.5 29.2 6.5 29.2h49.6L609 153.7zm-65.6 123.7c4.4-11.2 21.3-54.6 21.3-54.6-.3.5 4.4-11.3 7.1-18.6l3.6 16.8s10.2 46.4 12.4 56.4h-44.4zM233.5 153.7l-52.4 133-5.6-27c-9.8-31.3-40.2-65.3-74.2-82.3l47.8 171h56.5l84-194.7h-56.1z" fill="#fff"/>
+        <path d="M152.3 153.7H65.5l-.7 4c67.2 16.2 111.7 55.3 130.2 102.3l-18.8-89.7c-3.2-12.4-12.7-16.2-24-16.6z" fill="#f9a533"/>
+    </svg>`,
+    mastercard: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" style="height:28px;" role="img" aria-label="Mastercard">
+        <circle cx="38" cy="30" r="18" fill="#eb001b"/>
+        <circle cx="62" cy="30" r="18" fill="#f79e1b"/>
+        <path d="M50 16.3a18 18 0 0 1 0 27.4 18 18 0 0 1 0-27.4z" fill="#ff5f00"/>
+    </svg>`
+};
+
+// Formatear número de tarjeta
+function formatCardNumber(input) {
+    let val = input.value.replace(/\D/g, '').substring(0, 16);
+    input.value = val.replace(/(.{4})/g, '$1 ').trim();
+
+    // Actualizar preview
+    const formatted = input.value.padEnd(19, '•').replace(/ /g, '').replace(/\d(?=.{5,})/g, '•');
+    const groups = input.value ? input.value : '•••• •••• •••• ••••';
+    document.getElementById('pvNumber').textContent = groups.padEnd(19).replace(/(.{5})/g, '$1').trim() || '•••• •••• •••• ••••';
+
+    // Detección de marca
+    const marca = detectarMarca(input.value);
+    marcaDetectada = marca;
+
+    const preview   = document.getElementById('cardPreview');
+    const brandEl   = document.getElementById('pvBrand');
+    const logoEl    = document.getElementById('pvLogo');
+    const iconEl    = document.getElementById('brandIcon');
+
+    preview.classList.remove('visa', 'master');
+
+    if (marca === 'visa') {
+        preview.classList.add('visa');
+        brandEl.innerHTML = LOGOS.visa;
+        logoEl.style.display = 'none'; // usamos innerHTML en brandEl
+        iconEl.innerHTML = LOGOS.visa;
+    } else if (marca === 'mastercard') {
+        preview.classList.add('master');
+        brandEl.innerHTML = LOGOS.mastercard;
+        logoEl.style.display = 'none'; // usamos innerHTML en brandEl
+        iconEl.innerHTML = LOGOS.mastercard;
+    } else {
+        brandEl.innerHTML = '<span style="letter-spacing:.12em;font-size:11px;opacity:.8;">•••• ••••</span>';
+        logoEl.style.display = 'none';
+        iconEl.innerHTML = '<i class="bi bi-credit-card text-muted"></i>';
+    }
+
+    // Limpiar error
+    limpiarError('tcNumero', 'errNumero');
+}
+
+// Formatear vencimiento MM/AA
+function formatExpiry(input) {
+    let val = input.value.replace(/\D/g, '').substring(0, 4);
+    if (val.length >= 3) val = val.substring(0, 2) + '/' + val.substring(2);
+    input.value = val;
+    document.getElementById('pvExp').textContent = val || 'MM/AA';
+    limpiarError('tcFecha', 'errFecha');
+}
+
+// ─── Seleccionar método principal ────────────────────────────
+function seleccionarPago(metodo, card) {
+    document.querySelectorAll('.pago-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+
+    const infoSG = document.getElementById('infoSupergiros');
+    const infoCE = document.getElementById('infoContraentrega');
+    if (infoSG) infoSG.style.display = (metodo === 'supergiros') ? 'block' : 'none';
+    if (infoCE) infoCE.style.display = (metodo === 'contraentrega') ? 'block' : 'none';
+
+    if (metodo === 'tarjeta') {
+        metodoPagoSeleccionado = 'tarjeta-' + subTarjetaSel;
+        actualizarResumenPago('Tarjeta de ' + (subTarjetaSel === 'debito' ? 'Débito' : 'Crédito'));
+    } else if (metodo === 'supergiros') {
+        metodoPagoSeleccionado = 'supergiros';
+        actualizarResumenPago('Supergiros (Efectivo en punto)');
+    } else if (metodo === 'contraentrega') {
+        metodoPagoSeleccionado = 'contraentrega';
+        actualizarResumenPago('Pago Contra entrega (Efectivo)');
+    }
+
+    document.getElementById('hdnMetodoPago').value = metodoPagoSeleccionado;
+    document.getElementById('errorPago').style.display = 'none';
+}
+
+// ─── Seleccionar sub-opción de tarjeta ───────────────────────
+function seleccionarSubTarjeta(event, tipo) {
+    event.stopPropagation();
+    subTarjetaSel = tipo;
+    document.getElementById('subDebito').classList.toggle('sel', tipo === 'debito');
+    document.getElementById('subCredito').classList.toggle('sel', tipo === 'credito');
+    if (metodoPagoSeleccionado && metodoPagoSeleccionado.startsWith('tarjeta')) {
+        metodoPagoSeleccionado = 'tarjeta-' + tipo;
+        document.getElementById('hdnMetodoPago').value = metodoPagoSeleccionado;
+        actualizarResumenPago('Tarjeta de ' + (tipo === 'debito' ? 'Débito' : 'Crédito'));
+    }
+}
+
+// ─── Resumen de pago ─────────────────────────────────────────
+function actualizarResumenPago(texto) {
+    const box = document.getElementById('resumenPago');
+    const txt = document.getElementById('resumenPagoTexto');
+    if (box && txt) { txt.textContent = 'Pago con: ' + texto; box.style.display = 'block'; }
+}
+
+// ─── Helpers de validación visual ────────────────────────────
+function marcarError(inputId, errorId, msg) {
+    const el = document.getElementById(inputId);
+    const er = document.getElementById(errorId);
+    if (el) { el.classList.add('is-invalid', 'campo-requerido'); }
+    if (er) { er.textContent = msg; er.style.display = 'block'; }
+    return false;
+}
+function limpiarError(inputId, errorId) {
+    const el = document.getElementById(inputId);
+    const er = document.getElementById(errorId);
+    if (el) el.classList.remove('is-invalid', 'campo-requerido');
+    if (er) er.style.display = 'none';
+}
+
+// ─── Validar campos de tarjeta ───────────────────────────────
+function validarCamposTarjeta() {
+    let ok = true;
+
+    // Número de tarjeta
+    const num = document.getElementById('tcNumero').value.replace(/\s/g, '');
+    if (!num) {
+        marcarError('tcNumero', 'errNumero', 'El número de tarjeta es obligatorio.'); ok = false;
+    } else if (num.length < 13 || num.length > 16) {
+        marcarError('tcNumero', 'errNumero', 'El número de tarjeta debe tener entre 13 y 16 dígitos.'); ok = false;
+    } else if (!marcaDetectada) {
+        marcarError('tcNumero', 'errNumero', 'Solo se aceptan tarjetas Visa o Mastercard.'); ok = false;
+    } else { limpiarError('tcNumero', 'errNumero'); }
+
+    // Titular
+    const tit = document.getElementById('tcNombre').value.trim();
+    if (!tit) {
+        marcarError('tcNombre', 'errNombre', 'El nombre del titular es obligatorio.'); ok = false;
+    } else if (tit.length < 3) {
+        marcarError('tcNombre', 'errNombre', 'Ingresa el nombre completo del titular.'); ok = false;
+    } else { limpiarError('tcNombre', 'errNombre'); }
+
+    // Vencimiento MM/AA
+    const exp = document.getElementById('tcFecha').value.trim();
+    const expRegex = /^(0[1-9]|1[0-2])\/(\d{2})$/;
+    if (!exp) {
+        marcarError('tcFecha', 'errFecha', 'La fecha de vencimiento es obligatoria.'); ok = false;
+    } else if (!expRegex.test(exp)) {
+        marcarError('tcFecha', 'errFecha', 'Formato inválido. Usa MM/AA (ej: 08/27).'); ok = false;
+    } else {
+        const [mes, anio] = exp.split('/').map(Number);
+        const hoy  = new Date();
+        const expD = new Date(2000 + anio, mes - 1, 1);
+        if (expD < new Date(hoy.getFullYear(), hoy.getMonth(), 1)) {
+            marcarError('tcFecha', 'errFecha', 'La tarjeta está vencida.'); ok = false;
+        } else { limpiarError('tcFecha', 'errFecha'); }
+    }
+
+    // CVV
+    const cvv = document.getElementById('tcCvv').value.trim();
+    if (!cvv) {
+        marcarError('tcCvv', 'errCvv', 'El código de seguridad es obligatorio.'); ok = false;
+    } else if (!/^\d{3,4}$/.test(cvv)) {
+        marcarError('tcCvv', 'errCvv', 'El CVV debe tener 3 o 4 dígitos.'); ok = false;
+    } else { limpiarError('tcCvv', 'errCvv'); }
+
+    // Tipo de documento
+    const tipoDoc = document.getElementById('tcTipoDoc').value;
+    if (!tipoDoc) {
+        marcarError('tcTipoDoc', 'errTipoDoc', 'Selecciona el tipo de documento.'); ok = false;
+    } else { limpiarError('tcTipoDoc', 'errTipoDoc'); }
+
+    // Número de documento
+    const doc = document.getElementById('tcDocumento').value.trim();
+    if (!doc) {
+        marcarError('tcDocumento', 'errDocumento', 'El número de documento es obligatorio.'); ok = false;
+    } else if (doc.length < 5) {
+        marcarError('tcDocumento', 'errDocumento', 'El número de documento parece muy corto.'); ok = false;
+    } else { limpiarError('tcDocumento', 'errDocumento'); }
+
+    return ok;
+}
+
+// Confirmar pedido (submit)
+function confirmarPedido() {
+    // Sincronizar propina validada
+    const inputP = document.getElementById('inputPropina');
+    let valP = 0;
+    if (inputP) {
+        valP = Math.max(0, parseInt(inputP.value.replace(/[^\d]/g, ''), 10) || 0);
+        if (valP > 500000) valP = 500000;
+        inputP.value = valP;
+    } else {
+        valP = Math.max(0, Math.round(_propinaPedido));
+    }
+    const hdnPropina = document.getElementById('hdnPropina');
+    if (hdnPropina) hdnPropina.value = valP;
+
+    // 1. Método de pago seleccionado
+    if (!metodoPagoSeleccionado) {
+        const errEl = document.getElementById('errorPago');
+        errEl.style.display = 'block';
+        errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+    }
+
+    // 2. Si es tarjeta → mostrar pasarela simulada (no enviar aún)
+    if (metodoPagoSeleccionado.startsWith('tarjeta')) {
+        if (!validarCamposTarjeta()) {
+            document.getElementById('formTarjeta').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+        // Copiar valores al form oculto
+        document.getElementById('hdnTarjetaNumero').value      = document.getElementById('tcNumero').value.replace(/\s/g,'');
+        document.getElementById('hdnTarjetaTitular').value     = document.getElementById('tcNombre').value.trim();
+        document.getElementById('hdnTarjetaVencimiento').value = document.getElementById('tcFecha').value.trim();
+        document.getElementById('hdnTarjetaCvv').value         = document.getElementById('tcCvv').value.trim();
+        document.getElementById('hdnTarjetaTipoDoc').value     = document.getElementById('tcTipoDoc').value;
+        document.getElementById('hdnTarjetaDocumento').value   = document.getElementById('tcDocumento').value.trim();
+        document.getElementById('hdnMarcaTarjeta').value       = marcaDetectada;
+        document.getElementById('hdnMetodoPago').value         = metodoPagoSeleccionado;
+
+        // Abrir modal pasarela
+        abrirPasarela();
+        return false; // Bloquear submit normal; se enviará desde la pasarela
+    }
+
+    // 3. Supergiros → submit directo
+    document.getElementById('hdnMetodoPago').value = metodoPagoSeleccionado;
+    return true;
+}
+
+// PASARELA DE PAGO SIMULADA
+
+const ERRORES_SIMULADOS = [
+    'Fondos insuficientes. Verifica el saldo disponible.',
+    'Tarjeta bloqueada temporalmente. Contacta tu banco.',
+    'Límite de transacciones diarias alcanzado.',
+    'Error de comunicación con la red. Intenta nuevamente.',
+];
+
+let _pagarReintento = false;
+
+function abrirPasarela() {
+    // Resetear pantallas
+    mostrarPantallaGateway('pgProcessing');
+    resetearPasarela();
+    document.getElementById('pasarelaOverlay').classList.add('show');
+    simularProcesamiento();
+}
+
+function cerrarPasarela() {
+    document.getElementById('pasarelaOverlay').classList.remove('show');
+}
+
+function reintentarPago() {
+    mostrarPantallaGateway('pgProcessing');
+    resetearPasarela();
+    simularProcesamiento();
+}
+
+function mostrarPantallaGateway(id) {
+    document.querySelectorAll('.pg-screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+function resetearPasarela() {
+    document.getElementById('pgProgressFill').style.width = '0%';
+    document.getElementById('pgStatusText').textContent = 'Conectando con la red bancaria...';
+    ['pgStep1','pgStep2','pgStep3'].forEach((id,i) => {
+        const el = document.getElementById(id);
+        el.className = 'pg-step' + (i === 0 ? ' active' : '');
+    });
+}
+
+function simularProcesamiento() {
+    const fill    = document.getElementById('pgProgressFill');
+    const status  = document.getElementById('pgStatusText');
+    const step1   = document.getElementById('pgStep1');
+    const step2   = document.getElementById('pgStep2');
+    const step3   = document.getElementById('pgStep3');
+
+    // Paso 1 – Autenticando (0 → 35%)
+    setTimeout(() => {
+        fill.style.width = '35%';
+        status.textContent = 'Autenticando datos de la tarjeta...';
+    }, 300);
+
+    setTimeout(() => {
+        step1.className = 'pg-step done';
+        step2.className = 'pg-step active';
+        fill.style.width = '60%';
+        status.textContent = 'Verificando fondos con el banco emisor...';
+    }, 1300);
+
+    setTimeout(() => {
+        step2.className = 'pg-step done';
+        step3.className = 'pg-step active';
+        fill.style.width = '88%';
+        status.textContent = 'Confirmando transacción...';
+    }, 2400);
+
+    // Resultado final
+    setTimeout(() => {
+        fill.style.width = '100%';
+        step3.className = 'pg-step done';
+
+        // Simular: 90% éxito, 10% rechazo (para parecer realista)
+        const aprobado = Math.random() > 0.10;
+
+        setTimeout(() => {
+            if (aprobado) {
+                mostrarExitoPasarela();
+            } else {
+                mostrarErrorPasarela();
+            }
+        }, 400);
+    }, 3200);
+}
+
+function mostrarExitoPasarela() {
+    // Código de aprobación ficticio
+    const codigo = 'APR-' + Math.random().toString(36).substring(2,8).toUpperCase();
+    document.getElementById('pgApprovalCode').textContent = 'Código: ' + codigo;
+    mostrarPantallaGateway('pgSuccess');
+
+    // Enviar el form al servidor tras 2s
+    setTimeout(() => {
+        document.getElementById('formConfirmar').submit();
+    }, 2000);
+}
+
+function mostrarErrorPasarela() {
+    const msg = ERRORES_SIMULADOS[Math.floor(Math.random() * ERRORES_SIMULADOS.length)];
+    document.getElementById('pgErrorMsg').textContent = msg;
+    mostrarPantallaGateway('pgError');
+}
+
+// ─── Limpiar error en select al cambiar ──────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('tcTipoDoc')?.addEventListener('change',   () => limpiarError('tcTipoDoc',   'errTipoDoc'));
+    document.getElementById('tcDocumento')?.addEventListener('input',  () => limpiarError('tcDocumento', 'errDocumento'));
+    document.getElementById('tcNombre')?.addEventListener('input',     () => limpiarError('tcNombre',    'errNombre'));
+    document.getElementById('tcCvv')?.addEventListener('input',        () => limpiarError('tcCvv',       'errCvv'));
+});
+</script>
+}

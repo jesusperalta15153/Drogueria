@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="FarmaVida — Tu aliado de salud. Productos farmaceuticos, medicamentos y mas." />
+    <title>@ViewData["Title"] - FarmaVida</title>
+    <link rel="icon" type="image/svg+xml" href="~/img/logodrogueria.svg" />
+
+<script>
+    // Carga inmediata de tema para evitar parpadeo y mantener preferencia al recargar
+    (function () {
+        const savedTheme = localStorage.getItem('app_theme') || 'light';
+        document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    })();
+</script>
+
+
+<!-- Animación suave para la navegación -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        document.addEventListener('click', function (e) {
+
+            const enlace = e.target.closest('a[href^="#"]');
+
+            if (!enlace) {
+                return;
+            }
+
+            const destinoId = enlace.getAttribute('href');
+
+            // Ignorar enlaces que solamente tienen #
+            if (!destinoId || destinoId === '#') {
+                return;
+            }
+
+            const destino = document.querySelector(destinoId);
+
+            if (!destino) {
+                return;
+            }
+
+            e.preventDefault();
+
+            const inicio = window.scrollY;
+            const destinoY = destino.getBoundingClientRect().top + window.scrollY;
+
+            const distancia = destinoY - inicio;
+
+            // Más distancia = un poco más de duración
+            const duracion = Math.min(
+                1200,
+                Math.max(600, Math.abs(distancia) * 0.8)
+            );
+
+            let tiempoInicio = null;
+
+            function animar(tiempoActual) {
+
+                if (tiempoInicio === null) {
+                    tiempoInicio = tiempoActual;
+                }
+
+                const progreso = Math.min(
+                    (tiempoActual - tiempoInicio) / duracion,
+                    1
+                );
+
+                // Suavizado: acelera al principio y desacelera al final
+                const suavizado =
+                    progreso < 0.5
+                        ? 2 * progreso * progreso
+                        : 1 - Math.pow(-2 * progreso + 2, 2) / 2;
+
+                window.scrollTo(
+                    0,
+                    inicio + distancia * suavizado
+                );
+
+                if (progreso < 1) {
+                    requestAnimationFrame(animar);
+                }
+            }
+
+            requestAnimationFrame(animar);
+        });
+
+    });
+</script>
+
+
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Bootstrap 5 CSS -->
+<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+<!-- Site Styles -->
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/layout-publico.css" asp-append-version="true" />
+
+@await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+<div style="display:flex; flex-direction:column; min-height:100vh;">
+
+    <!-- NAVBAR PUBLICA -->
+    <nav class="pub-navbar" id="pubNavbar" role="navigation" aria-label="Navegacion principal">
+        <div class="pub-navbar-inner">
+
+            <!-- Marca -->
+            <a href="/" class="pub-brand" id="pubBrandLink">
+                <div class="pub-brand-logo">
+                    <img src="~/img/logodrogueria.svg" alt="FarmaVida Logo" class="pub-brand-img"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                    <span class="pub-brand-fallback" style="display:none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="2.2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/>
+                            <path d="m8.5 8.5 7 7"/>
+                        </svg>
+                    </span>
+                </div>
+                <div class="pub-brand-text">
+                    <span class="pub-brand-name">FarmaVida</span>
+                    <span class="pub-brand-tagline">Tu aliado de salud</span>
+                </div>
+            </a>
+
+            <!-- Links de navegacion (desktop) -->
+            <ul class="pub-nav-links" id="pubNavLinks">
+                @{
+                    var activeNav = ViewData["ActiveNav"] as string ?? "";
+                    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+                    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+                    bool isHome = string.Equals(currentController, "Home", StringComparison.OrdinalIgnoreCase)
+                                  && (string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase)
+                                      || string.Equals(currentAction, "Pagina_Inicio", StringComparison.OrdinalIgnoreCase)
+                                      || string.IsNullOrEmpty(currentAction));
+                    string GetNavUrl(string anchor) => isHome ? anchor : (Url.Action("Index", "Home") + anchor);
+                }
+                <li><a href="@GetNavUrl("#inicio")" class="@(activeNav == "inicio" ? "active" : "")"><i class="bi bi-house"></i> Inicio</a></li>
+                <li><a href="@GetNavUrl("#servicios")" class="@(activeNav == "servicios" ? "active" : "")"><i class="bi bi-grid-3x3-gap"></i> Servicios</a></li>
+                <li><a href="@GetNavUrl("#productos")" class="@(activeNav == "productos" ? "active" : "")"><i class="bi bi-box-seam"></i> Productos</a></li>
+                
+                <!-- Dropdown Nosotros / Trabaja -->
+                <li class="pub-nav-dropdown-wrapper" id="pubNosotrosDropdownWrapper">
+                    <button type="button" class="pub-nav-dropdown-btn @(activeNav == "nosotros" || activeNav == "trabaja" ? "active" : "")" id="pubNosotrosBtn" aria-haspopup="true" aria-expanded="false">
+                        <i class="bi bi-people"></i>
+                        <span>Nosotros</span>
+                        <i class="bi bi-chevron-down pub-nav-chevron"></i>
+                    </button>
+                    <div class="pub-nav-dropdown-menu" id="pubNosotrosDropdown" role="menu">
+                        <a href="@GetNavUrl("#nosotros")" class="pub-nav-dropdown-item @(activeNav == "nosotros" ? "active" : "")" role="menuitem">
+                            <div class="pub-nav-dropdown-icon">
+                                <i class="bi bi-info-circle"></i>
+                            </div>
+                            <div class="pub-nav-dropdown-label">
+                                <span class="pub-nav-dropdown-title">Quiénes Somos</span>
+                                <span class="pub-nav-dropdown-sub">Visión general y compromiso</span>
+                            </div>
+                        </a>
+                        <a asp-controller="Home" asp-action="Nosotros" class="pub-nav-dropdown-item @(activeNav == "nosotros" ? "active" : "")" role="menuitem">
+                            <div class="pub-nav-dropdown-icon">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                            <div class="pub-nav-dropdown-label">
+                                <span class="pub-nav-dropdown-title">Nuestra Historia</span>
+                                <span class="pub-nav-dropdown-sub">Trayectoria, misión y valores</span>
+                            </div>
+                        </a>
+                        <a asp-controller="Home" asp-action="Trabaja" class="pub-nav-dropdown-item @(activeNav == "trabaja" ? "active" : "")" role="menuitem">
+                            <div class="pub-nav-dropdown-icon">
+                                <i class="bi bi-person-workspace"></i>
+                            </div>
+                            <div class="pub-nav-dropdown-label">
+                                <span class="pub-nav-dropdown-title">Trabaja con nosotros</span>
+                                <span class="pub-nav-dropdown-sub">Convocatorias y postulaciones</span>
+                            </div>
+                        </a>
+                    </div>
+                </li>
+
+                <li><a href="@GetNavUrl("#contacto")" class="@(activeNav == "contacto" ? "active" : "")"><i class="bi bi-envelope"></i> Contacto</a></li>
+            </ul>
+
+            <!-- Acciones derechas -->
+            <div class="pub-nav-actions">
+                <!-- Toggle Tema -->
+                <button class="btn-icon" id="themeToggleBtn" title="Cambiar tema" type="button" aria-label="Cambiar tema claro/oscuro">
+                    <i class="bi bi-moon-stars" id="themeIcon"></i>
+                </button>
+
+                <!-- Dropdown Iniciar Sesion -->
+                <div class="pub-login-wrapper">
+                    <button class="pub-login-btn" id="pubLoginBtn" type="button"
+                            aria-haspopup="true" aria-expanded="false" aria-controls="pubLoginDropdown">
+                        <i class="bi bi-person-circle"></i>
+                        <span>Iniciar Sesion</span>
+                        <i class="bi bi-chevron-down" style="font-size:11px; opacity:.7;"></i>
+                    </button>
+                    <div class="pub-login-dropdown" id="pubLoginDropdown" role="menu">
+                        <div class="pub-login-dropdown-header">Acceder como</div>
+                        <a href="#" class="pub-login-option" role="menuitem" id="loginOptionEmpleado" data-bs-toggle="modal" data-bs-target="#_LoginEmpleado">
+                            <div class="pub-login-option-icon"><i class="bi bi-person-badge"></i></div>
+                            <div class="pub-login-option-label">
+                                <span class="pub-login-option-title">Empleado</span>
+                                <span class="pub-login-option-sub">Gestion de pedidos y ventas</span>
+                            </div>
+                        </a>
+                        <a href="#" class="pub-login-option" role="menuitem" id="loginOptionAdmin" data-bs-toggle="modal" data-bs-target="#_LoginAdmin">
+                            <div class="pub-login-option-icon"><i class="bi bi-shield-lock"></i></div>
+                            <div class="pub-login-option-label">
+                                <span class="pub-login-option-title">Administrador</span>
+                                <span class="pub-login-option-sub">Panel de control completo</span>
+                            </div>
+                        </a>
+                        <a href="#" class="pub-login-option" role="menuitem" id="loginOptionCliente" data-bs-toggle="modal" data-bs-target="#_LoginCliente">
+                            <div class="pub-login-option-icon"><i class="bi bi-bag-heart"></i></div>
+                            <div class="pub-login-option-label">
+                                <span class="pub-login-option-title">Cliente</span>
+                                <span class="pub-login-option-sub">Compras y mis pedidos</span>
+                            </div>
+                        </a>
+                        <a href="#" class="pub-login-option" role="menuitem" id="loginOptionRepartidor" data-bs-toggle="modal" data-bs-target="#_LoginRepartidor">
+                            <div class="pub-login-option-icon"><i class="bi bi-bicycle"></i></div>
+                            <div class="pub-login-option-label">
+                                <span class="pub-login-option-title">Repartidor</span>
+                                <span class="pub-login-option-sub">Mis domicilios asignados</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Menu Movil -->
+    <div class="pub-mobile-menu" id="pubMobileMenu" role="dialog" aria-label="Menu movil">
+        <a href="@GetNavUrl("#inicio")" class="@(activeNav == "inicio" ? "active" : "")" id="mobileNavInicio">
+            <i class="bi bi-house-fill"></i> Inicio
+        </a>
+        <a href="@GetNavUrl("#servicios")" class="@(activeNav == "servicios" ? "active" : "")" id="mobileNavServicios">
+            <i class="bi bi-grid-3x3-gap-fill"></i> Servicios
+        </a>
+        <a href="@GetNavUrl("#productos")" class="@(activeNav == "productos" ? "active" : "")" id="mobileNavProductos">
+            <i class="bi bi-box-seam-fill"></i> Productos
+        </a>
+        <a href="@GetNavUrl("#nosotros")" class="@(activeNav == "nosotros" ? "active" : "")" id="mobileNavNosotros">
+            <i class="bi bi-info-circle-fill"></i> Quiénes Somos
+        </a>
+        <a asp-controller="Home" asp-action="Nosotros" class="@(activeNav == "nosotros" ? "active" : "")" id="mobileNavHistoria">
+            <i class="bi bi-clock-history"></i> Nuestra Historia
+        </a>
+        <a asp-controller="Home" asp-action="Trabaja" class="@(activeNav == "trabaja" ? "active" : "")" id="mobileNavTrabaja">
+            <i class="bi bi-person-workspace"></i> Trabaja con nosotros
+        </a>
+        <a href="@GetNavUrl("#contacto")" class="@(activeNav == "contacto" ? "active" : "")" id="mobileNavContacto">
+            <i class="bi bi-envelope-fill"></i> Contacto
+        </a>
+        <div class="pub-mobile-divider"></div>
+        <div class="pub-mobile-section-label">Iniciar sesion como</div>
+        <a href="#" id="mobileLoginEmpleado" data-bs-toggle="modal" data-bs-target="#_LoginEmpleado">
+            <i class="bi bi-person-badge-fill"></i> Empleado
+        </a>
+        <a href="#" id="mobileLoginAdmin" data-bs-toggle="modal" data-bs-target="#_LoginAdmin">
+            <i class="bi bi-shield-lock-fill"></i> Administrador
+        </a>
+        <a href="#" id="mobileLoginCliente" data-bs-toggle="modal" data-bs-target="#_LoginCliente">
+            <i class="bi bi-bag-heart-fill"></i> Cliente
+        </a>
+    </div>
+
+    <!-- ====================================================
+         CONTENIDO PRINCIPAL
+    ===================================================== -->
+    <main role="main" class="pub-main-content position-relative">
+        @if (TempData["Success"] != null || TempData["Exito"] != null || TempData["Error"] != null)
+        {
+            <div class="position-fixed top-0 end-0 p-3" style="z-index: 1100; margin-top: 75px; max-width: 420px; width: 100%;">
+                @if (TempData["Success"] != null || TempData["Exito"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show shadow-lg rounded-3 d-flex align-items-center gap-2" role="alert">
+                        <i class="bi bi-check-circle-fill fs-5"></i>
+                        <div>@(TempData["Success"] ?? TempData["Exito"])</div>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                }
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show shadow-lg rounded-3 d-flex align-items-center gap-2" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                        <div>@TempData["Error"]</div>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                }
+            </div>
+        }
+        @RenderBody()
+    </main>
+
+    <!-- ====================================================
+         FOOTER PUBLICO
+    ===================================================== -->
+<footer class="pub-footer" id="contacto" role="contentinfo">
+        <div class="pub-footer-inner">
+
+            <!-- Columna 1: Marca -->
+            <div class="pub-footer-brand">
+                <a href="/" class="pub-footer-brand-logo" aria-label="Inicio FarmaVida">
+                    <div class="pub-footer-logo-box">
+                        <img src="~/img/logodrogueria.svg" alt="logo" style="width:100%;height:100%;object-fit:contain;"
+                             onerror="this.style.display='none';" />
+                    </div>
+                    <span class="pub-footer-brand-name">FarmaVida</span>
+                </a>
+                <p class="pub-footer-desc">
+                    Tu farmacia de confianza. Ofrecemos medicamentos, productos de salud y bienestar
+                    con la mejor atencion y los precios mas competitivos del mercado.
+                </p>
+                <div class="pub-footer-socials">
+                    <a href="#" class="pub-social-btn" aria-label="Facebook" id="socialFacebook">
+                        <i class="bi bi-facebook"></i>
+                    </a>
+                    <a href="#" class="pub-social-btn" aria-label="Instagram" id="socialInstagram">
+                        <i class="bi bi-instagram"></i>
+                    </a>
+                    <a href="https://wa.me/573135248994" class="pub-social-btn" aria-label="WhatsApp" id="socialWhatsapp" target="_blank" rel="noopener">
+                        <i class="bi bi-whatsapp"></i>
+                    </a>
+                    <a href="#" class="pub-social-btn" aria-label="Twitter" id="socialTwitter">
+                        <i class="bi bi-twitter-x"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Columna 2: Navegacion -->
+            <div>
+                <div class="pub-footer-col-title">Navegacion</div>
+                <ul class="pub-footer-links">
+                    <li><a href="@GetNavUrl("#inicio")"><i class="bi bi-chevron-right"></i> Inicio</a></li>
+                    <li><a href="@GetNavUrl("#nosotros")"><i class="bi bi-chevron-right"></i> Nosotros</a></li>
+                    <li><a href="@GetNavUrl("#servicios")"><i class="bi bi-chevron-right"></i> Servicios</a></li>
+                    <li><a href="@GetNavUrl("#productos")"><i class="bi bi-chevron-right"></i> Productos</a></li>
+                    <li><a href="@GetNavUrl("#contacto")"><i class="bi bi-chevron-right"></i> Contacto</a></li>
+                    <li><a asp-controller="Home" asp-action="Trabaja"><i class="bi bi-chevron-right"></i> Crezcamos juntos</a></li>
+                </ul>
+            </div>
+
+            <!-- Columna 4: Contacto -->
+
+            <div style="grid-column: span 2;">
+                <div class="pub-footer-col-title">Contacto</div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px 30px;">
+
+                    <!-- Columna 1 -->
+                    <div>
+                        <div class="pub-footer-contact-item">
+                            <div class="pub-footer-contact-icon">
+                                <i class="bi bi-geo-alt-fill"></i>
+                            </div>
+                            <span>Calle 45 # 12-34, Bogota, Colombia</span>
+                        </div>
+
+                        <div class="pub-footer-contact-item">
+                            <div class="pub-footer-contact-icon">
+                                <i class="bi bi-telephone-fill"></i>
+                            </div>
+                            <span>+57 (601) 123-4567</span>
+                        </div>
+
+                        <div class="pub-footer-contact-item">
+                            <div class="pub-footer-contact-icon">
+                                <i class="bi bi-envelope-fill"></i>
+                            </div>
+                            <span>info@drogueria.com</span>
+                        </div>
+                    </div>
+
+                    <!-- Columna 2 -->
+                    <div>
+                        <div class="pub-footer-contact-item">
+                            <a href="https://wa.me/573135248994" target="_blank" rel="noopener" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
+                                <div class="pub-footer-contact-icon">
+                                    <i class="bi bi-whatsapp"></i>
+                                </div>
+                                <span>WhatsApp: +57 313 524 8994</span>
+                            </a>
+                        </div>
+
+                        <div class="pub-footer-contact-item">
+                            <div class="pub-footer-contact-icon">
+                                <i class="bi bi-clock-fill"></i>
+                            </div>
+                            <span>Lun - Sab: 7:00 AM - 9:00 PM</span>
+                        </div>
+
+                        <div class="pub-footer-contact-item">
+                            <div class="pub-footer-contact-icon">
+                                <i class="bi bi-truck"></i>
+                            </div>
+                            <span>Domicilios: 8:00 AM - 8:00 PM</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Barra inferior -->
+        <div class="pub-footer-bottom">
+            <span>&copy; @DateTime.Now.Year <strong>FarmaVida</strong>. Todos los derechos reservados.</span><span class="pub-footer-bottom-badge"><i class="bi bi-shield-check"></i> Sistema Gestor v1.0
+            </span>
+        </div>
+    </footer>
+
+</div><!-- /app wrapper -->
+
+<!-- Scripts -->
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+
+<script>
+
+    // Dropdown Login
+    (function () {
+        var loginBtn = document.getElementById('pubLoginBtn');
+        var dropdown = document.getElementById('pubLoginDropdown');
+
+        if (loginBtn && dropdown) {
+            loginBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isOpen = dropdown.classList.toggle('show');
+                loginBtn.setAttribute('aria-expanded', String(isOpen));
+            });
+            document.addEventListener('click', function () {
+                dropdown.classList.remove('show');
+                loginBtn.setAttribute('aria-expanded', 'false');
+            });
+        }
+    })();
+
+    // Hamburguesa + Menu Movil
+    (function () {
+        var hamburger = document.getElementById('pubHamburger');
+        var mobileMenu = document.getElementById('pubMobileMenu');
+
+        if (hamburger && mobileMenu) {
+            hamburger.addEventListener('click', function () {
+                var isOpen = mobileMenu.classList.toggle('show');
+                hamburger.classList.toggle('is-open', isOpen);
+                hamburger.setAttribute('aria-expanded', String(isOpen));
+            });
+            mobileMenu.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    mobileMenu.classList.remove('show');
+                    hamburger.classList.remove('is-open');
+                    hamburger.setAttribute('aria-expanded', 'false');
+                });
+            });
+        }
+    })();
+
+    // Dropdown Nosotros en Nav
+    (function () {
+        var btn = document.getElementById('pubNosotrosBtn');
+        var dropdown = document.getElementById('pubNosotrosDropdown');
+
+        if (btn && dropdown) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isOpen = dropdown.classList.toggle('show');
+                btn.setAttribute('aria-expanded', String(isOpen));
+            });
+
+            // Cerrar al hacer clic en cualquier opción dentro del dropdown
+            dropdown.querySelectorAll('.pub-nav-dropdown-item').forEach(function (item) {
+                item.addEventListener('click', function () {
+                    dropdown.classList.remove('show');
+                    btn.setAttribute('aria-expanded', 'false');
+                });
+            });
+
+            document.addEventListener('click', function () {
+                dropdown.classList.remove('show');
+                btn.setAttribute('aria-expanded', 'false');
+            });
+        }
+    })();
+
+    // Scroll effect navbar
+    (function () {
+        var navbar = document.getElementById('pubNavbar');
+        window.addEventListener('scroll', function () {
+            if (navbar) navbar.classList.toggle('scrolled', window.scrollY > 20);
+        }, { passive: true });
+    })();
+
+    // Desplazamiento suave si se entra con un hash desde otra página
+    (function () {
+        if (window.location.hash) {
+            window.addEventListener('load', function () {
+                var hash = window.location.hash;
+                var target = document.querySelector(hash);
+                if (target) {
+                    setTimeout(function () {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 150);
+                }
+            });
+        }
+    })();
+</script>
+
+<partial name="_ModalesAutenticacion" />
+
+@await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

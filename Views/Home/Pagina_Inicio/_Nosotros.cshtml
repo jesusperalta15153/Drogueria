@@ -1,0 +1,247 @@
+@{
+    ViewData["Title"] = "Sobre Nosotros | FarmaVida";
+    ViewData["ActiveNav"] = "nosotros";
+    Layout = "/Views/Shared/_LayoutPublico.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/nosotros.css" asp-append-version="true" />
+
+<div class="pagina-nosotros">
+    <div class="nosotros-main-wrapper">
+        <!-- Barra Superior de Navegación -->
+        <div class="nosotros-nav-bar">
+            <a asp-controller="Home" asp-action="Index" class="btn-volver-portal">
+                <i class="bi bi-arrow-left"></i>
+                <span>Volver al inicio</span>
+            </a>
+            <div class="nosotros-live-badge">
+                <i class="bi bi-shield-check"></i>
+                <span>Compromiso de Salud y Calidad</span>
+            </div>
+        </div>
+
+        <!-- HERO SECTION -->
+        <header class="nosotros-hero-card">
+            <div class="nosotros-hero-pill">
+                <i class="bi bi-heart-pulse-fill"></i> Tradición, Ética e Innovación
+            </div>
+            <h1 class="nosotros-hero-title">
+                Cuidando la salud de tu familia con <span class="text-gradient">calidez, ética y tecnología</span>
+            </h1>
+            <p class="nosotros-hero-sub">
+                En FarmaVida combinamos la cercanía del farmacéutico de confianza con soluciones digitales modernas para que siempre tengas tus medicamentos certificados a tiempo y al mejor precio.
+            </p>
+
+            <!-- Métricas Destacadas -->
+            <div class="nosotros-stats-grid">
+                <div class="nosotros-stat-box">
+                    <div class="nosotros-stat-icon">
+                        <i class="bi bi-calendar2-check-fill"></i>
+                    </div>
+                    <div>
+                        <div class="nosotros-stat-num">+10 Años</div>
+                        <div class="nosotros-stat-label">De experiencia y trayectoria</div>
+                    </div>
+                </div>
+                <div class="nosotros-stat-box">
+                    <div class="nosotros-stat-icon">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="nosotros-stat-num">+5.000</div>
+                        <div class="nosotros-stat-label">Clientes y familias atendidas</div>
+                    </div>
+                </div>
+                <div class="nosotros-stat-box">
+                    <div class="nosotros-stat-icon">
+                        <i class="bi bi-patch-check-fill"></i>
+                    </div>
+                    <div>
+                        <div class="nosotros-stat-num">100%</div>
+                        <div class="nosotros-stat-label">Medicamentos auténticos</div>
+                    </div>
+                </div>
+                <div class="nosotros-stat-box">
+                    <div class="nosotros-stat-icon">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                    <div>
+                        <div class="nosotros-stat-num">Rápido</div>
+                        <div class="nosotros-stat-label">Domicilios seguros en tu zona</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- SECCIÓN: NUESTRA HISTORIA CON TIMELINE & VISUAL CARD -->
+        <section class="nosotros-historia-section">
+            <div class="historia-grid">
+                <div class="historia-text-wrap">
+                    <div class="nosotros-hero-pill">
+                        <i class="bi bi-clock-history"></i> Nuestra Historia
+                    </div>
+                    <h2>De una droguería comunitaria a tu aliado integral de salud</h2>
+                    <p>
+                        <strong>FarmaVida</strong> nació con un propósito claro: hacer que el acceso a los medicamentos sea transparente, cálido y digno para toda la comunidad. Entendimos que detrás de cada fórmula médica hay una persona o una familia que necesita seguridad, rapidez y un trato verdaderamente humano.
+                    </p>
+                    <p>
+                        A lo largo de los años hemos crecido paso a paso, manteniendo intactos nuestros valores éticos e incorporando herramientas tecnológicas modernas para facilitar consultas en tiempo real y envíos a domicilio inmediatos.
+                    </p>
+
+                    <!-- Línea de tiempo -->
+                    <div class="historia-timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-year">2014 • Los Inicios</div>
+                            <h3 class="timeline-title">Nace nuestra primera sede comunitaria</h3>
+                            <p class="timeline-desc">Abrimos nuestras puertas con atención personalizada y el compromiso de asesorar a cada vecino de forma honesta y responsable.</p>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-year">2019 • Expansión</div>
+                            <h3 class="timeline-title">Alianzas con laboratorios líderes</h3>
+                            <p class="timeline-desc">Ampliamos nuestro catálogo de medicamentos éticos, genéricos de marca, cuidado personal y nutrición certificada.</p>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-year">2024 • Innovación</div>
+                            <h3 class="timeline-title">Transformación digital y entregas rápidas</h3>
+                            <p class="timeline-desc">Modernizamos nuestra atención con inventario digital, catálogo en línea y una flota ágil de repartidores.</p>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-year">Hoy • Presente y Futuro</div>
+                            <h3 class="timeline-title">Tu droguería de confianza de siempre</h3>
+                            <p class="timeline-desc">Miles de familias confían día a día en nuestro servicio, profesionalismo y vocación farmacéutica.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta visual con imagen -->
+                <div class="historia-visual-card">
+                    <div class="historia-img-wrap">
+                        <img src="~/img/2.jpeg" alt="FarmaVida Droguería y Farmacia" class="historia-img" onerror="this.src='/img/1.jpeg'" />
+                        <span class="historia-img-badge">
+                            <i class="bi bi-geo-alt-fill text-danger"></i> Atención en punto y domicilio
+                        </span>
+                    </div>
+                    <div class="historia-card-body">
+                        <h4 class="fw-bold mb-3" style="color: var(--t-base, #0f172a);">Compromiso con tu Bienestar</h4>
+                        <div class="historia-card-features">
+                            <div class="historia-feat-item">
+                                <div class="historia-feat-icon">
+                                    <i class="bi bi-prescription2"></i>
+                                </div>
+                                <div>
+                                    <h5 class="historia-feat-title">Dispensación Profesional</h5>
+                                    <p class="historia-feat-desc">Revisión minuciosa de fórmulas médicas y verificación de dosis.</p>
+                                </div>
+                            </div>
+                            <div class="historia-feat-item">
+                                <div class="historia-feat-icon">
+                                    <i class="bi bi-thermometer-snow"></i>
+                                </div>
+                                <div>
+                                    <h5 class="historia-feat-title">Control de Cadena de Frío</h5>
+                                    <p class="historia-feat-desc">Termometría y humedad controladas para la máxima eficacia de tus productos.</p>
+                                </div>
+                            </div>
+                            <div class="historia-feat-item">
+                                <div class="historia-feat-icon">
+                                    <i class="bi bi-shield-lock-fill"></i>
+                                </div>
+                                <div>
+                                    <h5 class="historia-feat-title">Origen 100% Avalado</h5>
+                                    <p class="historia-feat-desc">Trabajamos exclusivamente con distribuidores autorizados por el INVIMA.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: MISIÓN Y VISIÓN -->
+        <section class="mision-vision-grid">
+            <div class="mv-card mv-card-mision">
+                <div class="mv-icon-box">
+                    <i class="bi bi-compass-fill"></i>
+                </div>
+                <h3 class="mv-title">Nuestra Misión</h3>
+                <p class="mv-desc">
+                    Brindar a cada paciente y familia soluciones de salud oportunas, medicamentos 100% auténticos y asesoría farmacéutica profesional, apoyados en una atención cálida, humana y tecnológicamente ágil que garantice su tranquilidad y bienestar diario.
+                </p>
+            </div>
+            <div class="mv-card mv-card-vision">
+                <div class="mv-icon-box">
+                    <i class="bi bi-eye-fill"></i>
+                </div>
+                <h3 class="mv-title">Nuestra Visión</h3>
+                <p class="mv-desc">
+                    Ser la red de droguería líder y de mayor confianza en la comunidad, reconocida por la excelencia en el servicio al cliente, la innovación continua en entregas farmacéuticas y el impacto positivo y solidario en la salud de nuestra gente.
+                </p>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: NUESTROS VALORES -->
+        <section class="nosotros-valores-section">
+            <div class="valores-header">
+                <div class="nosotros-hero-pill">
+                    <i class="bi bi-gem"></i> Lo que nos define
+                </div>
+                <h2>Nuestros Valores Fundamentales</h2>
+                <p>Principios inquebrantables que guían cada fórmula que entregamos y cada asesoría que brindamos.</p>
+            </div>
+
+            <div class="valores-grid">
+                <div class="valor-card">
+                    <div class="valor-icon-circle">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <h3 class="valor-title">Ética y Responsabilidad</h3>
+                    <p class="valor-desc">Manejo riguroso y transparente en la dispensación farmacéutica y asesoría médica preventiva.</p>
+                </div>
+                <div class="valor-card">
+                    <div class="valor-icon-circle">
+                        <i class="bi bi-heart-pulse"></i>
+                    </div>
+                    <h3 class="valor-title">Empatía y Calidez</h3>
+                    <p class="valor-desc">Atención humana y respetuosa. Nos ponemos en el lugar de cada paciente y de sus familiares.</p>
+                </div>
+                <div class="valor-card">
+                    <div class="valor-icon-circle">
+                        <i class="bi bi-lightning-charge"></i>
+                    </div>
+                    <h3 class="valor-title">Agilidad y Compromiso</h3>
+                    <p class="valor-desc">Respuesta inmediata a tus necesidades con domicilios rápidos y stock disponible en tiempo real.</p>
+                </div>
+                <div class="valor-card">
+                    <div class="valor-icon-circle">
+                        <i class="bi bi-award"></i>
+                    </div>
+                    <h3 class="valor-title">Calidad Garantizada</h3>
+                    <p class="valor-desc">Laboratorios avalados y almacenamiento certificado bajo los más altos estándares sanitarios.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- BANNER TRABAJA CON NOSOTROS CTA -->
+        <section class="nosotros-cta-card">
+            <div class="nosotros-cta-text">
+                <h3>¿Quieres formar parte de FarmaVida?</h3>
+                <p>Buscamos talento apasionado por la salud, el servicio al cliente y la logística rápida. ¡Postúlate hoy a nuestras vacantes abiertas!</p>
+            </div>
+            <div class="nosotros-cta-actions">
+                <a asp-controller="Home" asp-action="Trabaja" class="btn-cta-white">
+                    <i class="bi bi-person-workspace"></i>
+                    <span>Ver Vacantes y Postularme</span>
+                </a>
+                <a href="/#productos" class="btn-cta-outline">
+                    <i class="bi bi-bag-check"></i>
+                    <span>Ver Catálogo</span>
+                </a>
+            </div>
+        </section>
+    </div>
+</div>

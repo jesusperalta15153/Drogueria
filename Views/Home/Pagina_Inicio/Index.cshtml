@@ -1,0 +1,374 @@
+@{
+    ViewData["Title"] = "Droguería";
+    Layout = "/Views/Shared/_LayoutPublico.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/landingPages.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+<div class="pagina-inicio" id="inicio">
+
+    <!-- CARRUSEL -->
+    <section class="carrusel" id="carrusel">
+        <div class="slide activo">
+            <img src="~/img/1.jpeg" alt="Droguería">
+            <div class="contenido-slide">
+                <span class="etiqueta-slide">TU SALUD ES NUESTRA PRIORIDAD</span>
+                <h1>Bienvenido a nuestra Droguería</h1>
+                <p>
+                    Encuentra medicamentos, productos de cuidado personal
+                    y mucho más para cuidar de ti y de tu familia.
+                </p>
+                <a href="#productos" class="boton">Ver productos</a>
+            </div>
+        </div>
+
+        <div class="slide">
+            <img src="~/img/2.jpeg" alt="Productos de droguería">
+        </div>
+
+        <div class="slide">
+            <img src="~/img/3.jpeg" alt="Promociones">
+        </div>
+
+        <button class="flecha anterior" type="button" onclick="cambiarSlide(-1)" aria-label="Anterior">
+            &#10094;
+        </button>
+
+        <button class="flecha siguiente" type="button" onclick="cambiarSlide(1)" aria-label="Siguiente">
+            &#10095;
+        </button>
+
+        <div class="indicadores">
+            <button class="punto activo" type="button" onclick="irSlide(0)" aria-label="Ir a la diapositiva 1"></button>
+            <button class="punto" type="button" onclick="irSlide(1)" aria-label="Ir a la diapositiva 2"></button>
+            <button class="punto" type="button" onclick="irSlide(2)" aria-label="Ir a la diapositiva 3"></button>
+        </div>
+    </section>
+
+    <!-- SERVICIOS -->
+    <section class="servicios" id="servicios">
+        <span class="etiqueta">LO QUE OFRECEMOS</span>
+        <h2>Nuestros servicios</h2>
+        <p class="texto-seccion">
+            Encuentra soluciones para cuidar tu salud de forma rápida,
+            sencilla y segura.
+        </p>
+
+        <div class="tarjetas">
+            <!-- MEDICAMENTOS -->
+            <div class="tarjeta">
+                <div class="icono-servicio icono-svg">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M7 17l10-10a4.24 4.24 0 0 1 6 6L13 23a4.24 4.24 0 0 1-6-6z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="M9 15l6-6" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </div>
+                <h3>Medicamentos</h3>
+                <p>Amplia variedad de medicamentos y productos de salud.</p>
+            </div>
+
+            <!-- ATENCIÓN FARMACÉUTICA -->
+            <div class="tarjeta">
+                <div class="icono-servicio icono-svg">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 21s-7-4-9-9a6 6 0 0 1 9-6 6 6 0 0 1 9 6c-2 5-9 9-9 9z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="M12 8v6M9 11h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <h3>Atención farmacéutica</h3>
+                <p>Orientación y atención personalizada para nuestros clientes.</p>
+            </div>
+
+            <!-- DOMICILIOS -->
+            <div class="tarjeta">
+                <div class="icono-servicio icono-svg">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 6h11v11H3z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="M14 10h4l3 3v4h-7z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <circle cx="7" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="2" />
+                        <circle cx="18" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </div>
+                <h3>Domicilios</h3>
+                <p>Recibe tus productos directamente en la comodidad de tu hogar.</p>
+            </div>
+
+            <!-- PRODUCTOS NATURALES -->
+            <div class="tarjeta">
+                <div class="icono-servicio icono-svg">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20 4C10 4 5 8 5 14c0 3 2 6 6 6 6 0 9-6 9-16z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="M4 21c3-6 7-9 13-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <h3>Productos naturales</h3>
+                <p>Vitaminas, suplementos y productos naturales para tu bienestar.</p>
+            </div>
+
+            <!-- CUIDADO PERSONAL -->
+            <div class="tarjeta">
+                <div class="icono-servicio icono-svg">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M9 4h6v3H9z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="M8 7h8l1 14H7z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="M10 11h4M10 15h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <h3>Cuidado personal</h3>
+                <p>Productos para higiene, belleza y cuidado diario.</p>
+            </div>
+
+            <!-- PEDIDOS EN LÍNEA -->
+            <div class="tarjeta">
+                <div class="icono-servicio icono-svg">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 4h2l2.5 12h10L21 8H6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <circle cx="10" cy="20" r="1.5" fill="currentColor" />
+                        <circle cx="18" cy="20" r="1.5" fill="currentColor" />
+                    </svg>
+                </div>
+                <h3>Pedidos en línea</h3>
+                <p>Realiza tus pedidos de manera rápida y sencilla.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONSEJOS -->
+    <section class="consejos">
+        <span class="etiqueta">BIENESTAR</span>
+        <h2>Consejos para cuidar tu salud</h2>
+
+        <div class="consejos-tarjetas">
+            <!-- HIDRATACIÓN -->
+            <article class="consejo">
+                <span class="icono-svg">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 2s-7 8-7 13a7 7 0 0 0 14 0c0-5-7-13-7-13z" fill="currentColor" />
+                    </svg>
+                </span>
+                <h3>Hidratación</h3>
+                <p>Mantener una buena hidratación es importante para el bienestar diario.</p>
+            </article>
+
+            <!-- ALIMENTACIÓN -->
+            <article class="consejo">
+                <span class="icono-svg">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 21C7 21 4 17 4 12c0-4 3-7 8-9 5 2 8 5 8 9 0 5-3 9-8 9z" fill="none" stroke="currentColor" stroke-width="2" />
+                        <path d="M8 14c3-4 6-6 10-7" fill="none" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                </span>
+                <h3>Alimentación saludable</h3>
+                <p>Una alimentación equilibrada ayuda a mantener buenos hábitos de salud.</p>
+            </article>
+
+            <!-- ACTIVIDAD FÍSICA -->
+            <article class="consejo">
+                <span class="icono-svg">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="14" cy="5" r="2" fill="currentColor" />
+                        <path d="M12 8l-3 5 4 2 2 6M9 13l-4 2M13 15l5-3 2 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </span>
+                <h3>Actividad física</h3>
+                <p>Mantenerse activo contribuye al bienestar físico y mental.</p>
+            </article>
+        </div>
+    </section>
+
+
+    <!-- VITRINA DE PRODUCTOS REALES -->
+    <section class="carrusel-pastillas" id="productos" style="padding: 80px 20px;">
+        <span class="etiqueta">NUESTROS PRODUCTOS</span>
+        <h2>Medicamentos y productos de salud</h2>
+        <p class="texto-seccion">Encuentra lo que necesitas para cuidar tu salud.</p>
+
+        @{
+            var productosVitrina = ViewBag.ProductosVitrina as List<Drogueria.Models.Producto> ?? new List<Drogueria.Models.Producto>();
+            if (productosVitrina.Count == 0)
+            {
+                productosVitrina = new List<Drogueria.Models.Producto>
+                {
+                    new Drogueria.Models.Producto { Nombre = "Acetaminofén 500mg", Descripcion = "Alivio rápido para el dolor de cabeza y fiebre.", Precio = 8500, Categoria = new Drogueria.Models.Categoria { Nombre = "Analgésicos" } },
+                    new Drogueria.Models.Producto { Nombre = "Ibuprofeno 400mg", Descripcion = "Antiinflamatorio y analgésico de acción prolongada.", Precio = 12000, Categoria = new Drogueria.Models.Categoria { Nombre = "Antiinflamatorios" } },
+                    new Drogueria.Models.Producto { Nombre = "Vitamina C + Zinc 1000mg", Descripcion = "Fortalece las defensas y apoya el sistema inmune.", Precio = 18500, Categoria = new Drogueria.Models.Categoria { Nombre = "Vitaminas" } },
+                    new Drogueria.Models.Producto { Nombre = "Suero Oral Rehidratante", Descripcion = "Solución de rehidratación oral con electrolitos.", Precio = 6500, Categoria = new Drogueria.Models.Categoria { Nombre = "Cuidado y Salud" } }
+                };
+            }
+        }
+
+        <!-- Grid de tarjetas de productos -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; max-width: 1200px; margin: 48px auto 0;">
+            @foreach (var prod in productosVitrina)
+            {
+                var imgSrc = !string.IsNullOrEmpty(prod.Imagen)
+                    ? "/" + prod.Imagen
+                    : "/img/pastilla1.jpeg";
+                var categoria = prod.Categoria?.Nombre ?? "Medicamento";
+
+                <div class="pub-prod-card">
+                    <div class="pub-prod-img-wrap">
+                        <img src="@imgSrc" alt="@prod.Nombre" class="pub-prod-img" onerror="this.src='/img/pastilla1.jpeg'" />
+                        <span class="pub-prod-cat-badge">@categoria</span>
+                    </div>
+                    <div class="pub-prod-body">
+                        <h3 class="pub-prod-name">@prod.Nombre</h3>
+                        @if (!string.IsNullOrWhiteSpace(prod.Descripcion))
+                        {
+                            <p class="pub-prod-desc">@(prod.Descripcion!.Length > 70 ? prod.Descripcion.Substring(0, 70) + "…" : prod.Descripcion)</p>
+                        }
+                        <div class="pub-prod-footer">
+                            <span class="pub-prod-price">$@prod.Precio.ToString("N2")</span>
+                            <div class="pub-prod-actions">
+                                <a href="#" class="pub-btn-cart" data-bs-toggle="modal" data-bs-target="#_LoginCliente" title="Inicia sesión para agregar al carrito">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                                </a>
+                                <a href="#" class="pub-btn-buy" data-bs-toggle="modal" data-bs-target="#_LoginCliente">Comprar</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Botón Mostrar más productos -->
+        <div class="pub-more-products-wrap">
+            <button type="button" class="pub-btn-more-products" data-bs-toggle="modal" data-bs-target="#_LoginCliente" id="btnMostrarMasProductos">
+                <i class="bi bi-grid-3x3-gap-fill me-2"></i>
+                <span>Más productos</span>
+                <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+        </div>
+    </section>
+
+    <!-- QUIÉNES SOMOS / NUESTRA HISTORIA (LANDING PAGE) -->
+    <section class="informacion" id="nosotros">
+        <div class="informacion-contenido">
+            <div class="informacion-texto">
+                <span class="etiqueta"><i class="bi bi-heart-pulse-fill me-1"></i> QUIÉNES SOMOS</span>
+                <h2>Más de una década cuidando tu salud y bienestar</h2>
+                <p>
+                    En <strong>FarmaVida</strong> combinamos la calidez del servicio farmacéutico de confianza
+                    con la rapidez y comodidad de la atención digital. Nos esforzamos día a día por ofrecerte
+                    medicamentos certificados, orientación responsable y entregas ágiles directamente a tu puerta.
+                </p>
+                <p>
+                    Nuestra misión es ser tu principal aliado de salud: brindándote precios justos, atención
+                    humana y la seguridad de que tu familia siempre recibe lo mejor.
+                </p>
+
+                <!-- Métricas destacadas -->
+                <div class="d-flex flex-wrap gap-4 my-4 py-2 border-top border-bottom" style="border-color: var(--border, rgba(0,0,0,0.08)) !important;">
+                    <div>
+                        <div class="fw-bolder fs-4" style="color: var(--primary, #7c3aed);">+10 Años</div>
+                        <div class="small" style="color: var(--t-muted, #64748b);">De experiencia</div>
+                    </div>
+                    <div>
+                        <div class="fw-bolder fs-4" style="color: var(--primary, #7c3aed);">+5.000</div>
+                        <div class="small" style="color: var(--t-muted, #64748b);">Familias atendidas</div>
+                    </div>
+                    <div>
+                        <div class="fw-bolder fs-4" style="color: var(--primary, #7c3aed);">100%</div>
+                        <div class="small" style="color: var(--t-muted, #64748b);">Garantía de calidad</div>
+                    </div>
+                </div>
+
+                <a asp-controller="Home" asp-action="Nosotros" class="boton-secundario d-inline-flex align-items-center gap-2">
+                    <span>Conoce toda nuestra historia</span>
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="informacion-beneficios">
+                <!-- ASESORÍA FARMACÉUTICA -->
+                <div class="beneficio">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width: 52px; height: 52px; background: rgba(124, 58, 237, 0.12); color: #7c3aed; font-size: 1.5rem;">
+                        <i class="bi bi-chat-heart-fill"></i>
+                    </span>
+                    <div>
+                        <h3 class="fw-bold mb-1 fs-5">Atención y Asesoría Profesional</h3>
+                        <p class="mb-0 text-muted small">Personal farmacéutico capacitado dispuesto a orientarte en fórmulas y tratamientos.</p>
+                    </div>
+                </div>
+
+                <!-- DOMICILIOS RÁPIDOS -->
+                <div class="beneficio">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width: 52px; height: 52px; background: rgba(16, 185, 129, 0.12); color: #10b981; font-size: 1.5rem;">
+                        <i class="bi bi-truck"></i>
+                    </span>
+                    <div>
+                        <h3 class="fw-bold mb-1 fs-5">Entregas Ágiles y Seguras</h3>
+                        <p class="mb-0 text-muted small">Llevamos tus pedidos en el menor tiempo con trazabilidad y riguroso cuidado higiénico.</p>
+                    </div>
+                </div>
+
+                <!-- CERTIFICACIÓN Y CONFIANZA -->
+                <div class="beneficio">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width: 52px; height: 52px; background: rgba(14, 165, 233, 0.12); color: #0ea5e9; font-size: 1.5rem;">
+                        <i class="bi bi-patch-check-fill"></i>
+                    </span>
+                    <div>
+                        <h3 class="fw-bold mb-1 fs-5">Medicamentos 100% Auténticos</h3>
+                        <p class="mb-0 text-muted small">Almacenamiento certificado y procedencia directa de laboratorios avalados oficialmente.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACTO -->
+    <section class="contacto-inicio">
+        <div>
+            <span class="etiqueta">ESTAMOS PARA AYUDARTE</span>
+            <h2>¿Necesitas ayuda?</h2>
+            <p>Comunícate con nosotros y recibe atención personalizada.</p>
+        </div>
+        <a href="https://wa.me/573135248994?text=Hola%2C%20necesito%20ayuda" class="boton-contacto" target="_blank" rel="noopener">Contáctanos →</a>
+    </section>
+</div>
+
+<!-- CARRUSEL SCRIPT -->
+<script>
+    let pastillaActual = 0;
+
+    function mostrarPastilla(indice) {
+        const slides = document.querySelectorAll(".pastilla-slide");
+        const puntos = document.querySelectorAll(".punto-pastilla");
+
+        if (slides.length === 0) return;
+
+        if (indice >= slides.length) {
+            pastillaActual = 0;
+        } else if (indice < 0) {
+            pastillaActual = slides.length - 1;
+        } else {
+            pastillaActual = indice;
+        }
+
+        slides.forEach(function (slide) {
+            slide.classList.remove("activo");
+        });
+
+        puntos.forEach(function (punto) {
+            punto.classList.remove("activo");
+        });
+
+        slides[pastillaActual].classList.add("activo");
+        if (puntos[pastillaActual]) {
+            puntos[pastillaActual].classList.add("activo");
+        }
+    }
+
+    function cambiarPastilla(direccion) {
+        mostrarPastilla(pastillaActual + direccion);
+    }
+
+    function irPastilla(indice) {
+        mostrarPastilla(indice);
+    }
+</script>
+
+@section Scripts {
+    <script src="~/js/landingPages.js" asp-append-version="true"></script>
+}

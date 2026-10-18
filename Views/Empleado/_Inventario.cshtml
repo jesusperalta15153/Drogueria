@@ -1,0 +1,187 @@
+@model IEnumerable<Drogueria.Models.Producto>
+@{
+    ViewData["Title"] = "Inventario";
+    ViewData["ActiveNav"] = "inventario";
+    var categorias = (ViewBag.Categorias as IEnumerable<Drogueria.Models.Categoria>) ?? new List<Drogueria.Models.Categoria>();
+}
+
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Exito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@{
+    var totalUnidades = Model.Sum(p => p.Stock);
+    var productosSinStock = Model.Count(p => p.Stock == 0 && p.Estado);
+    var productosStockBajo = Model.Count(p => p.Stock > 0 && p.Stock <= p.StockMinimo && p.Estado);
+    var valorInventario = Model.Where(p => p.Estado).Sum(p => p.Stock * p.Precio);
+}
+
+<div class="inv-header">
+    <h1><i class="bi bi-box-seam-fill"></i> Inventario</h1>
+    <span class="text-muted small">Gestión de stock</span>
+</div>
+
+<div class="inv-summary-row">
+    <div class="inv-summary-card">
+        <div class="inv-summary-top">
+            <div class="inv-summary-icon purple"><i class="bi bi-boxes"></i></div>
+        </div>
+        <div class="inv-summary-value">@totalUnidades.ToString("N0")</div>
+        <div class="inv-summary-label">Unidades totales</div>
+    </div>
+    <div class="inv-summary-card">
+        <div class="inv-summary-top">
+            <div class="inv-summary-icon teal"><i class="bi bi-currency-dollar"></i></div>
+        </div>
+        <div class="inv-summary-value">$@valorInventario.ToString("N0")</div>
+        <div class="inv-summary-label">Valor del inventario</div>
+    </div>
+    <div class="inv-summary-card">
+        <div class="inv-summary-top">
+            <div class="inv-summary-icon amber"><i class="bi bi-exclamation-triangle"></i></div>
+        </div>
+        <div class="inv-summary-value">@productosStockBajo</div>
+        <div class="inv-summary-label">Stock bajo (≤ mín.)</div>
+    </div>
+    <div class="inv-summary-card">
+        <div class="inv-summary-top">
+            <div class="inv-summary-icon rose"><i class="bi bi-x-octagon"></i></div>
+        </div>
+        <div class="inv-summary-value">@productosSinStock</div>
+        <div class="inv-summary-label">Sin stock</div>
+    </div>
+</div>
+
+<div class="inv-search-bar">
+    <div class="inv-search-wrap">
+        <i class="bi bi-search"></i>
+        <input type="text" class="inv-search-input" id="invBuscar" placeholder="Buscar producto..." oninput="filtrarInventario()" maxlength="100">
+    </div>
+    <select class="inv-filter-select" id="invCatFilter" onchange="filtrarInventario()">
+        <option value="">Todas las categorías</option>
+        @foreach (var c in categorias)
+        {
+            <option value="@c.Nombre">@c.Nombre</option>
+        }
+    </select>
+    <select class="inv-filter-select" id="invStockFilter" onchange="filtrarInventario()">
+        <option value="">Todo el stock</option>
+        <option value="sin">Sin stock (0)</option>
+        <option value="bajo">Stock bajo (≤ mín.)</option>
+        <option value="normal">Stock normal (> mín.)</option>
+    </select>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="inv-empty">
+        <i class="bi bi-archive"></i>
+        <p>No hay productos registrados en el inventario.</p>
+    </div>
+}
+else
+{
+    <div class="inv-grid" id="invGrid">
+        @foreach (var p in Model.Where(p => p.Estado).OrderBy(p => p.Stock))
+        {
+            var stockClass = p.Stock == 0 ? "out" : p.Stock <= p.StockMinimo ? "low" : "ok";
+            <div class="inv-card inv-item" data-nombre="@p.Nombre.ToLower()" data-cat="@(p.Categoria?.Nombre ?? "")" data-stock="@p.Stock" data-stock-minimo="@p.StockMinimo">
+                <div class="inv-card-header">
+                    @if (!string.IsNullOrEmpty(p.Imagen))
+                    {
+                        <img src="~/@p.Imagen" alt="@p.Nombre" class="inv-card-img" />
+                    }
+                    else
+                    {
+                        <div class="inv-card-img-ph"><i class="bi bi-image"></i></div>
+                    }
+                    <div class="inv-card-info">
+                        <div class="inv-card-name">@p.Nombre</div>
+                        <div class="inv-card-cat">@(p.Categoria?.Nombre ?? "Sin categoría") · Mín: @p.StockMinimo</div>
+                    </div>
+                    <div class="inv-card-price">$@p.Precio.ToString("N2")</div>
+                </div>
+
+                <div class="inv-stock-section">
+                    <div>
+                        <div class="inv-stock-label">Existencia</div>
+                        <div class="inv-stock-current @stockClass">@p.Stock</div>
+                    </div>
+                    
+                    <form asp-controller="Empleado" asp-action="ActualizarStock" method="post" class="inv-stock-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@p.Id" />
+                        <input type="number" name="stock" class="inv-stock-input" value="@p.Stock" min="0" max="999999" />
+
+                        <button type="submit" class="inv-btn-update" title="Guardar stock">
+                            <i class="bi bi-check-lg"></i> Guardar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<script>
+    function filtrarInventario() {
+        const buscar = document.getElementById('invBuscar').value.toLowerCase();
+        const cat = document.getElementById('invCatFilter').value;
+        const stockF = document.getElementById('invStockFilter').value;
+        const items = document.querySelectorAll('.inv-item');
+        items.forEach(item => {
+            const matchNombre = item.dataset.nombre.includes(buscar);
+            const matchCat = !cat || item.dataset.cat === cat;
+            const stock = parseInt(item.dataset.stock) || 0;
+            const stockMinimo = parseInt(item.dataset.stockMinimo) || 5;
+            let matchStock = true;
+            if (stockF === 'sin') matchStock = stock === 0;
+            else if (stockF === 'bajo') matchStock = stock >= 1 && stock <= stockMinimo;
+            else if (stockF === 'normal') matchStock = stock > stockMinimo;
+            item.style.display = (matchNombre && matchCat && matchStock) ? '' : 'none';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.inv-stock-form').forEach(form => {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const btn = form.querySelector('button');
+                const origHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                const res = await window.postFormAjax(form.action, new FormData(form));
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+
+                if (res.success) {
+                    window.showAppToast(res.message || 'Stock actualizado correctamente.', 'success');
+                    const newStock = parseInt(res.nuevoStock ?? form.querySelector('input[name="stock"]').value);
+                    const card = form.closest('.inv-item');
+                    if (card) {
+                        card.dataset.stock = newStock;
+                        const stockCur = card.querySelector('.inv-stock-current');
+                        if (stockCur) {
+                            stockCur.textContent = newStock;
+                            stockCur.className = 'inv-stock-current ' + (newStock === 0 ? 'out' : newStock <= 10 ? 'low' : 'ok');
+                        }
+                    }
+                } else {
+                    window.showAppToast(res.message || 'Error al actualizar el stock.', 'error');
+                }
+            });
+        });
+    });
+</script>

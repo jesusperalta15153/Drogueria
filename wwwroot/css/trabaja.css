@@ -1,0 +1,1156 @@
+/* ==========================================================================
+   CREZCAMOS JUNTOS / TRABAJA CON NOSOTROS - ESTILOS PROFESIONALES
+   Compatible con Modo Claro y Modo Oscuro
+   ========================================================================== */
+
+.pagina-trabaja {
+    min-height: 100vh;
+    background-color: var(--bg-app, #faf9fd);
+    color: var(--t-base, #0f172a);
+    padding-bottom: 80px;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Contenedor Principal */
+.trabaja-main-wrapper {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+/* Barra superior de navegación / volver */
+.trabaja-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.btn-volver-portal {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary, #7c3aed);
+    background: var(--primary-soft, rgba(124, 58, 237, 0.08));
+    border: 1px solid var(--primary-border, rgba(124, 58, 237, 0.2));
+    border-radius: 999px;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-volver-portal:hover {
+    background: var(--primary, #7c3aed);
+    color: #ffffff;
+    transform: translateX(-3px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+}
+
+.trabaja-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--success, #10b981);
+    background: var(--success-soft, rgba(16, 185, 129, 0.12));
+    padding: 5px 12px;
+    border-radius: 999px;
+}
+
+.trabaja-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--success, #10b981);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+/* ==========================================================================
+   HERO / CABECERA
+   ========================================================================== */
+.trabaja-hero-card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(168, 85, 247, 0.04) 100%);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 28px;
+    padding: 48px 40px;
+    margin-bottom: 40px;
+    text-align: center;
+    box-shadow: 0 10px 30px -10px rgba(124, 58, 237, 0.08);
+}
+
+.trabaja-hero-card::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.trabaja-hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--primary, #7c3aed);
+    background: var(--bg-card, #ffffff);
+    padding: 6px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--primary-border, rgba(124, 58, 237, 0.25));
+    margin-bottom: 18px;
+    box-shadow: 0 2px 6px rgba(124, 58, 237, 0.08);
+}
+
+.trabaja-hero-title {
+    font-size: 2.6rem;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    color: var(--t-base, #0f172a);
+    letter-spacing: -0.02em;
+}
+
+.trabaja-hero-title .text-gradient {
+    background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.trabaja-hero-sub {
+    max-width: 720px;
+    margin: 0 auto 28px;
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--t-muted, #475569);
+}
+
+/* Stats / Puntos Clave en Hero */
+.trabaja-hero-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+
+.hero-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--t-base, #0f172a);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.hero-chip i {
+    color: var(--primary, #7c3aed);
+    font-size: 1.1rem;
+}
+
+.hero-chip:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary, #7c3aed);
+}
+
+/* ==========================================================================
+   BENEFICIOS / PILARES
+   ========================================================================== */
+.trabaja-pilares-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 48px;
+}
+
+.pilar-card {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 20px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.pilar-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 28px -10px rgba(124, 58, 237, 0.12);
+    border-color: var(--primary-border, rgba(124, 58, 237, 0.3));
+}
+
+.pilar-icon-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+    color: var(--primary, #7c3aed);
+    background: var(--primary-soft, rgba(124, 58, 237, 0.1));
+}
+
+.pilar-card h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--t-base, #0f172a);
+}
+
+.pilar-card p {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--t-muted, #475569);
+    margin: 0;
+}
+
+/* ==========================================================================
+   SELECTOR DE ROL (CARGO) INTERACTIVO
+   ========================================================================== */
+.trabaja-selector-seccion {
+    margin-bottom: 32px;
+}
+
+.selector-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.selector-header h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--t-base, #0f172a);
+    margin-bottom: 6px;
+}
+
+.selector-header p {
+    font-size: 0.95rem;
+    color: var(--t-muted, #475569);
+}
+
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.role-tab-btn {
+    position: relative;
+    background: var(--bg-card, #ffffff);
+    border: 2px solid var(--border, #e2e8f0);
+    border-radius: 20px;
+    padding: 24px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    width: 100%;
+}
+
+.role-tab-btn:hover {
+    border-color: var(--primary, #7c3aed);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.08);
+}
+
+.role-tab-btn.activo {
+    border-color: var(--primary, #7c3aed);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(168, 85, 247, 0.02) 100%);
+    box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.16);
+}
+
+.role-tab-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: var(--primary-soft, rgba(124, 58, 237, 0.1));
+    color: var(--primary, #7c3aed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    transition: all 0.25s ease;
+}
+
+.role-tab-btn.activo .role-tab-icon {
+    background: var(--primary, #7c3aed);
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(124, 58, 237, 0.35);
+}
+
+.role-tab-info {
+    flex-grow: 1;
+}
+
+.role-tab-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(124, 58, 237, 0.1);
+    color: var(--primary, #7c3aed);
+    margin-bottom: 6px;
+}
+
+.role-tab-badge.badge-destacado {
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--success, #10b981);
+}
+
+.role-tab-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--t-base, #0f172a);
+    margin-bottom: 4px;
+}
+
+.role-tab-desc {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--t-muted, #475569);
+    margin: 0;
+}
+
+.role-tab-check {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid var(--border, #cbd5e1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    transition: all 0.2s ease;
+}
+
+.role-tab-btn.activo .role-tab-check {
+    border-color: var(--primary, #7c3aed);
+    background: var(--primary, #7c3aed);
+    color: #ffffff;
+}
+
+/* ==========================================================================
+   FORMULARIO CARD
+   ========================================================================== */
+.trabaja-form-card {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 28px;
+    padding: 44px;
+    box-shadow: 0 16px 45px -10px rgba(0, 0, 0, 0.05);
+    max-width: 920px;
+    margin: 0 auto 60px;
+}
+
+.form-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+
+.form-title-group h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--t-base, #0f172a);
+    margin-bottom: 4px;
+}
+
+.form-title-group p {
+    font-size: 0.9rem;
+    color: var(--t-muted, #475569);
+    margin: 0;
+}
+
+.form-meta-badges {
+    display: flex;
+    gap: 10px;
+}
+
+.form-meta-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--t-muted, #475569);
+    background: var(--bg-app, #faf9fd);
+    border: 1px solid var(--border, #e2e8f0);
+    padding: 6px 12px;
+    border-radius: 999px;
+}
+
+/* Secciones dentro del formulario */
+.form-step-section {
+    margin-bottom: 36px;
+}
+
+.form-step-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--t-base, #0f172a);
+    margin-bottom: 20px;
+}
+
+.step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--primary-soft, rgba(124, 58, 237, 0.12));
+    color: var(--primary, #7c3aed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+
+/* Grid de campos */
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.form-col-full {
+    grid-column: 1 / -1;
+}
+
+.campo-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--t-base, #0f172a);
+}
+
+.campo-label .req {
+    color: var(--danger, #ef4444);
+    margin-left: 2px;
+}
+
+.input-icon-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon-wrapper i.input-icon {
+    position: absolute;
+    left: 14px;
+    color: var(--t-muted, #64748b);
+    font-size: 1.05rem;
+    pointer-events: none;
+    transition: color 0.2s ease;
+}
+
+.form-control-pro {
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 16px 11px 44px;
+    font-size: 0.95rem;
+    color: var(--t-base, #0f172a);
+    background-color: var(--bg-card, #ffffff);
+    border: 1.5px solid var(--border, #cbd5e1);
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    outline: none;
+    font-family: inherit;
+}
+
+.form-control-pro.no-icon {
+    padding-left: 16px;
+}
+
+.form-control-pro:focus {
+    border-color: var(--primary, #7c3aed);
+    box-shadow: 0 0 0 3.5px rgba(124, 58, 237, 0.15);
+}
+
+.input-icon-wrapper:focus-within i.input-icon {
+    color: var(--primary, #7c3aed);
+}
+
+textarea.form-control-pro {
+    min-height: 110px;
+    padding-top: 14px;
+    resize: vertical;
+}
+
+.char-counter {
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--t-muted, #94a3b8);
+    margin-top: 4px;
+}
+
+/* Radio Switches / Pills */
+.radio-pills-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.radio-pill-item {
+    position: relative;
+}
+
+.radio-pill-item input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.radio-pill-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    border: 1.5px solid var(--border, #cbd5e1);
+    border-radius: 10px;
+    background: var(--bg-card, #ffffff);
+    color: var(--t-base, #0f172a);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.radio-pill-item input:checked + .radio-pill-label {
+    border-color: var(--primary, #7c3aed);
+    background: var(--primary-soft, rgba(124, 58, 237, 0.1));
+    color: var(--primary, #7c3aed);
+}
+
+/* Dropzone Hoja de Vida */
+.cv-upload-dropzone {
+    border: 2px dashed var(--border, #cbd5e1);
+    border-radius: 16px;
+    padding: 24px 20px;
+    text-align: center;
+    background: var(--bg-app, #faf9fd);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.cv-upload-dropzone:hover,
+.cv-upload-dropzone.drag-over {
+    border-color: var(--primary, #7c3aed);
+    background: rgba(124, 58, 237, 0.04);
+}
+
+.cv-icon-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary-soft, rgba(124, 58, 237, 0.1));
+    color: var(--primary, #7c3aed);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin: 0 auto 12px;
+}
+
+.cv-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--t-base, #0f172a);
+    margin-bottom: 4px;
+}
+
+.cv-sub {
+    font-size: 0.82rem;
+    color: var(--t-muted, #64748b);
+    margin: 0;
+}
+
+.cv-file-preview {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-top: 12px;
+}
+
+.cv-file-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--t-base, #0f172a);
+}
+
+.cv-remove-btn {
+    background: none;
+    border: none;
+    color: var(--danger, #ef4444);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 4px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.cv-remove-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Consentimiento */
+.consentimiento-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--bg-app, #faf9fd);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 14px;
+    margin-top: 24px;
+    margin-bottom: 32px;
+}
+
+.consentimiento-box input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    accent-color: var(--primary, #7c3aed);
+    margin-top: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.consentimiento-box label {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--t-muted, #475569);
+    cursor: pointer;
+    margin: 0;
+}
+
+.consentimiento-box a {
+    color: var(--primary, #7c3aed);
+    text-decoration: underline;
+}
+
+/* Botones de Acción */
+.form-actions-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.btn-postulacion-whatsapp {
+    width: 100%;
+    min-height: 54px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.4);
+}
+
+.btn-postulacion-whatsapp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -4px rgba(16, 185, 129, 0.5);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.btn-postulacion-whatsapp i {
+    font-size: 1.35rem;
+}
+
+.btn-postulacion-secondary {
+    width: 100%;
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: transparent;
+    color: var(--t-base, #0f172a);
+    font-size: 0.92rem;
+    font-weight: 600;
+    border: 1.5px solid var(--border, #cbd5e1);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-postulacion-secondary:hover {
+    border-color: var(--primary, #7c3aed);
+    color: var(--primary, #7c3aed);
+    background: var(--primary-soft, rgba(124, 58, 237, 0.05));
+}
+
+.form-disclaimer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--t-muted, #64748b);
+    text-align: center;
+    margin-top: 14px;
+}
+
+/* ==========================================================================
+   PROCESO DE SELECCIÓN (TIMELINE)
+   ========================================================================== */
+.trabaja-proceso-seccion {
+    margin-bottom: 60px;
+}
+
+.proceso-header {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.proceso-header h2 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--t-base, #0f172a);
+    margin-bottom: 8px;
+}
+
+.proceso-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.step-card {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 20px;
+    padding: 24px;
+    position: relative;
+}
+
+.step-badge-circulo {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--primary, #7c3aed);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 10px rgba(124, 58, 237, 0.25);
+}
+
+.step-card h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--t-base, #0f172a);
+    margin-bottom: 8px;
+}
+
+.step-card p {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--t-muted, #475569);
+    margin: 0;
+}
+
+/* ==========================================================================
+   PREGUNTAS FRECUENTES (FAQ)
+   ========================================================================== */
+.trabaja-faq-seccion {
+    max-width: 860px;
+    margin: 0 auto 60px;
+}
+
+.faq-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.faq-header h2 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--t-base, #0f172a);
+    margin-bottom: 8px;
+}
+
+.faq-accordion-item {
+    background: var(--bg-card, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+
+.faq-accordion-item:hover {
+    border-color: var(--primary-border, rgba(124, 58, 237, 0.3));
+}
+
+.faq-accordion-header {
+    width: 100%;
+    padding: 20px 24px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--t-base, #0f172a);
+    text-align: left;
+    cursor: pointer;
+}
+
+.faq-accordion-header i {
+    font-size: 1.1rem;
+    color: var(--primary, #7c3aed);
+    transition: transform 0.25s ease;
+}
+
+.faq-accordion-item.open .faq-accordion-header i {
+    transform: rotate(180deg);
+}
+
+.faq-accordion-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease;
+    padding: 0 24px;
+    color: var(--t-muted, #475569);
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+.faq-accordion-item.open .faq-accordion-body {
+    max-height: 250px;
+    padding-bottom: 20px;
+}
+
+/* ==========================================================================
+   BANNER DE CONTACTO TALENTO HUMANO
+   ========================================================================== */
+.trabaja-talento-banner {
+    background: linear-gradient(135deg, var(--primary, #7c3aed) 0%, #9333ea 100%);
+    border-radius: 24px;
+    padding: 36px 40px;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    box-shadow: 0 16px 36px -8px rgba(124, 58, 237, 0.35);
+}
+
+.talento-info h3 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+
+.talento-info p {
+    font-size: 0.95rem;
+    opacity: 0.9;
+    margin: 0;
+    max-width: 600px;
+}
+
+.talento-actions {
+    display: flex;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.btn-talento-direct {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    background: #ffffff;
+    color: var(--primary, #7c3aed);
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.92rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-talento-direct:hover {
+    background: #f1f5f9;
+    color: var(--primary-hover, #6d28d9);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* ==========================================================================
+   MODAL DE CONFIRMACIÓN POSTULACIÓN
+   ========================================================================== */
+.modal-postulacion-pro .modal-content {
+    border-radius: 24px;
+    border: none;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-postulacion-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    padding: 32px 24px;
+    text-align: center;
+    position: relative;
+}
+
+.modal-icon-success {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 16px;
+}
+
+.modal-postulacion-header h4 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: #ffffff;
+}
+
+.modal-postulacion-body {
+    padding: 28px;
+    color: var(--t-base, #0f172a);
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================== */
+@media (max-width: 991px) {
+    .trabaja-pilares-grid,
+    .proceso-steps-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .trabaja-hero-card {
+        padding: 36px 24px;
+    }
+
+    .trabaja-hero-title {
+        font-size: 2.1rem;
+    }
+
+    .trabaja-form-card {
+        padding: 32px 24px;
+    }
+
+    .trabaja-talento-banner {
+        flex-direction: column;
+        text-align: center;
+        padding: 32px 24px;
+    }
+
+    .talento-actions {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 767px) {
+    .trabaja-main-wrapper {
+        padding: 16px 14px 40px;
+    }
+
+    .form-control-pro {
+        font-size: 16px !important; /* Previene zoom automático molesto en iOS Safari */
+    }
+
+    .roles-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid-2,
+    .form-grid-3 {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .trabaja-pilares-grid,
+    .proceso-steps-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .trabaja-hero-title {
+        font-size: 1.85rem;
+    }
+
+    .form-header-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .form-meta-badges {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .trabaja-talento-banner {
+        padding: 24px 18px;
+    }
+
+    .btn-postulacion-whatsapp,
+    .btn-postulacion-secondary,
+    .role-tab-btn,
+    .btn-volver-portal {
+        touch-action: manipulation; /* Elimina retraso de toque de 300ms en smartphones */
+    }
+}
+
+@media (max-width: 576px) {
+    .trabaja-nav-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .trabaja-hero-card {
+        padding: 28px 16px;
+        border-radius: 20px;
+    }
+
+    .trabaja-hero-title {
+        font-size: 1.6rem;
+    }
+
+    .trabaja-hero-sub {
+        font-size: 0.95rem;
+    }
+
+    .trabaja-hero-chips {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .hero-chip {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .trabaja-form-card {
+        padding: 24px 16px;
+        border-radius: 20px;
+    }
+
+    .role-tab-btn {
+        padding: 18px 14px;
+        gap: 12px;
+    }
+
+    .role-tab-icon {
+        width: 46px;
+        height: 46px;
+        font-size: 1.3rem;
+    }
+
+    .role-tab-title {
+        font-size: 1.05rem;
+    }
+
+    .radio-pills-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .radio-pill-item, 
+    .radio-pill-label {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .btn-postulacion-whatsapp {
+        font-size: 0.95rem;
+        min-height: 50px;
+        padding: 10px 14px;
+    }
+
+    .btn-postulacion-secondary {
+        font-size: 0.88rem;
+        min-height: 46px;
+    }
+
+    .modal-postulacion-body {
+        padding: 20px 16px;
+    }
+}

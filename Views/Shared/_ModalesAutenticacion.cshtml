@@ -1,0 +1,459 @@
+@*
+    Modales de Autenticación Centralizados (Empleado, Admin, Cliente, Registro, Repartidor)
+    Disponibles para todo el Layout Público (_LayoutPublico.cshtml)
+*@
+
+<!-- Modal Empleado -->
+<div class="modal fade modal-login" id="_LoginEmpleado" tabindex="-1" aria-labelledby="_LoginEmpleadoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-login-banner">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div class="modal-login-icon-box">
+                    <i class="bi bi-person-badge"></i>
+                </div>
+                <h4 class="modal-login-title" id="_LoginEmpleadoLabel">Acceso Empleados</h4>
+                <p class="modal-login-subtitle">Gestión de inventarios, pedidos y punto de venta</p>
+            </div>
+            <div class="modal-login-body">
+                <div class="modal-login-alert-container">
+                    @if (TempData["Error"] != null && TempData["AbrirModal"]?.ToString() == "_LoginEmpleado")
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2 px-3 small rounded-3" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-6 flex-shrink-0"></i>
+                            <div>@TempData["Error"]</div>
+                        </div>
+                    }
+                </div>
+                <form class="modal-login-form" method="post" asp-controller="Account" asp-action="Login">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="rolEsperado" value="Empleado" />
+                    <div class="mb-3">
+                        <label for="emp-user" class="form-label">Usuario o Correo</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-person input-icon"></i>
+                            <input type="text" class="form-control" id="emp-user" name="email" placeholder="ej. empleado@drogueria.com" required maxlength="60" autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="emp-pass" class="form-label">Contraseña</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-lock input-icon"></i>
+                            <input type="password" class="form-control" id="emp-pass" name="password" placeholder="••••••••" required minlength="8" maxlength="25" autocomplete="current-password">
+                            <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('emp-pass', this)" title="Ver contraseña">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="rememberEmp">
+                            <label class="form-check-label small text-muted" for="rememberEmp">Recordar sesión</label>
+                        </div>
+                        <a href="#" class="text-decoration-none small fw-semibold text-primary">¿Olvidaste tu clave?</a>
+                    </div>
+                    <button type="submit" class="btn btn-login-submit">
+                        <span>Iniciar Sesión</span>
+                        <i class="bi bi-arrow-right-short fs-4"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="modal-login-footer">
+                <i class="bi bi-lock-fill me-1 text-primary"></i> Área restringida únicamente a personal autorizado
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Administrador -->
+<div class="modal fade modal-login" id="_LoginAdmin" tabindex="-1" aria-labelledby="_LoginAdminLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-login-banner">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div class="modal-login-icon-box">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+                <h4 class="modal-login-title" id="_LoginAdminLabel">Acceso Administrador</h4>
+                <p class="modal-login-subtitle">Panel de control completo y configuración del sistema</p>
+            </div>
+            <div class="modal-login-body">
+                <div class="modal-login-alert-container">
+                    @if (TempData["Error"] != null && TempData["AbrirModal"]?.ToString() == "_LoginAdmin")
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2 px-3 small rounded-3" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-6 flex-shrink-0"></i>
+                            <div>@TempData["Error"]</div>
+                        </div>
+                    }
+                </div>
+                <form class="modal-login-form" method="post" asp-controller="Account" asp-action="Login">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="rolEsperado" value="Administrador" />
+                    <div class="mb-3">
+                        <label for="admin-user" class="form-label">Usuario Administrador</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-shield-person input-icon"></i>
+                            <input type="text" class="form-control" id="admin-user" name="email" placeholder="admin@drogueria.com" required maxlength="60" autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="admin-pass" class="form-label">Contraseña</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-key input-icon"></i>
+                            <input type="password" class="form-control" id="admin-pass" name="password" placeholder="••••••••" required minlength="8" maxlength="25" autocomplete="current-password">
+                            <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('admin-pass', this)" title="Ver contraseña">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="rememberAdmin">
+                            <label class="form-check-label small text-muted" for="rememberAdmin">Mantener sesión activa</label>
+                        </div>
+                        <a href="#" class="text-decoration-none small fw-semibold text-primary">¿Problemas para ingresar?</a>
+                    </div>
+                    <button type="submit" class="btn btn-login-submit">
+                        <span>Ingresar al Panel</span>
+                        <i class="bi bi-arrow-right-short fs-4"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="modal-login-footer">
+                <i class="bi bi-lock-fill me-1 text-primary"></i> Área restringida únicamente a personal autorizado
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cliente Iniciar sesión -->
+<div class="modal fade modal-login" id="_LoginCliente" tabindex="-1" aria-labelledby="_LoginClienteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-login-banner">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div class="modal-login-icon-box">
+                    <i class="bi bi-bag-heart"></i>
+                </div>
+                <h4 class="modal-login-title" id="_LoginClienteLabel">¡Hola de nuevo!</h4>
+                <p class="modal-login-subtitle">Ingresa para realizar tus compras y ver tus domicilios</p>
+            </div>
+            <div class="modal-login-body">
+                <div class="modal-login-alert-container">
+                    @if (TempData["Error"] != null && TempData["AbrirModal"]?.ToString() == "_LoginCliente")
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2 px-3 small rounded-3" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-6 flex-shrink-0"></i>
+                            <div>@TempData["Error"]</div>
+                        </div>
+                    }
+                </div>
+                <form class="modal-login-form" method="post" asp-controller="Account" asp-action="Login">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="rolEsperado" value="Cliente" />
+                    <div class="mb-3">
+                        <label for="client-user" class="form-label">Correo Electrónico</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-envelope input-icon"></i>
+                            <input type="email" class="form-control" id="client-user" name="email" placeholder="tu-correo@ejemplo.com" required autocomplete="email" pattern="^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.(com|co|org|net|edu|gov|es|io|[a-zA-Z]{2,})$" title="Ejemplo: correo@@dominio.com o .co">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="client-pass" class="form-label">Contraseña</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-lock input-icon"></i>
+                            <input type="password" class="form-control" id="client-pass" name="password" placeholder="••••••••" required minlength="8" maxlength="25" autocomplete="current-password">
+                            <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('client-pass', this)" title="Ver contraseña">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="rememberClient">
+                            <label class="form-check-label small text-muted" for="rememberClient">Recordarme</label>
+                        </div>
+                        <a href="#" class="text-decoration-none small fw-semibold text-primary">¿Olvidaste tu clave?</a>
+                    </div>
+                    <button type="submit" class="btn btn-login-submit">
+                        <span>Ingresar</span>
+                        <i class="bi bi-arrow-right-short fs-4"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="modal-login-footer">
+                ¿Aún no tienes cuenta? <a href="#" class="fw-bold text-primary text-decoration-none ms-1" data-bs-toggle="modal" data-bs-target="#_RegistroCliente">Regístrate aquí</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cliente Registro -->
+<div class="modal fade modal-login" id="_RegistroCliente" tabindex="-1" aria-labelledby="_RegistroClienteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-login-banner">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div class="modal-login-icon-box">
+                    <i class="bi bi-person-plus"></i>
+                </div>
+                <h4 class="modal-login-title" id="_RegistroClienteLabel">Crear Cuenta</h4>
+                <p class="modal-login-subtitle">Regístrate para realizar tus compras y domicilios</p>
+            </div>
+            <div class="modal-login-body">
+                <div class="modal-login-alert-container">
+                    @if (TempData["Error"] != null && TempData["AbrirModal"]?.ToString() == "_RegistroCliente")
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2 px-3 small rounded-3" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-6 flex-shrink-0"></i>
+                            <div>@TempData["Error"]</div>
+                        </div>
+                    }
+                </div>
+                <form class="modal-login-form" method="post" asp-controller="Account" asp-action="Register">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label for="reg-name" class="form-label">Nombre</label>
+                            <div class="input-group-custom">
+                                <i class="bi bi-person input-icon"></i>
+                                <input type="text" class="form-control" id="reg-name" name="nombre" placeholder="Juan" required minlength="2" maxlength="100" autocomplete="given-name">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label for="reg-apellido" class="form-label">Apellido</label>
+                            <div class="input-group-custom">
+                                <i class="bi bi-person input-icon"></i>
+                                <input type="text" class="form-control" id="reg-apellido" name="apellido" placeholder="Pérez" required minlength="2" maxlength="100" autocomplete="family-name">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reg-email" class="form-label">Correo Electrónico</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-envelope input-icon"></i>
+                            <input type="email" class="form-control" id="reg-email" name="email" placeholder="tu-correo@ejemplo.com" required autocomplete="email" pattern="^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.(com|co|org|net|edu|gov|es|io|[a-zA-Z]{2,})$" title="El correo debe contener '@@', un dominio y extensión como .com o .co">
+                        </div>
+                        <small class="text-muted" style="font-size: 11px;">Formato requerido: usuario@@dominio.com o .co</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reg-pass" class="form-label">Contraseña</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-lock input-icon"></i>
+                            <input type="password" class="form-control" id="reg-pass" name="password" placeholder="••••••••" required minlength="6" maxlength="255" autocomplete="new-password">
+                            <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('reg-pass', this)" title="Ver contraseña">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="acceptTerms" required>
+                            <label class="form-check-label small text-muted" for="acceptTerms">
+                                Acepto los <a href="#" class="text-primary text-decoration-none fw-semibold">términos y políticas de privacidad</a>
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-login-submit">
+                        <span>Crear Mi Cuenta</span>
+                        <i class="bi bi-arrow-right-short fs-4"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="modal-login-footer">
+                ¿Ya tienes cuenta? <a href="#" class="fw-bold text-primary text-decoration-none ms-1" data-bs-toggle="modal" data-bs-target="#_LoginCliente">Inicia sesión aquí</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Repartidor -->
+<div class="modal fade modal-login" id="_LoginRepartidor" tabindex="-1" aria-labelledby="_LoginRepartidorLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-login-banner">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div class="modal-login-icon-box">
+                    <i class="bi bi-bicycle"></i>
+                </div>
+                <h4 class="modal-login-title" id="_LoginRepartidorLabel">Acceso Repartidor</h4>
+                <p class="modal-login-subtitle">Consulta y gestiona tus domicilios asignados</p>
+            </div>
+            <div class="modal-login-body">
+                <div class="modal-login-alert-container">
+                    @if (TempData["Error"] != null && TempData["AbrirModal"]?.ToString() == "_LoginRepartidor")
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2 px-3 small rounded-3" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-6 flex-shrink-0"></i>
+                            <div>@TempData["Error"]</div>
+                        </div>
+                    }
+                </div>
+                <form class="modal-login-form" method="post" asp-controller="Account" asp-action="Login">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="rolEsperado" value="Repartidor" />
+                    <div class="mb-3">
+                        <label for="rep-user" class="form-label">Usuario o Correo</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-person input-icon"></i>
+                            <input type="text" class="form-control" id="rep-user" name="email" placeholder="ej. repartidor@drogueria.com" required maxlength="60" autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rep-pass" class="form-label">Contraseña</label>
+                        <div class="input-group-custom">
+                            <i class="bi bi-lock input-icon"></i>
+                            <input type="password" class="form-control" id="rep-pass" name="password" placeholder="••••••••" required minlength="8" maxlength="25" autocomplete="current-password">
+                            <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('rep-pass', this)" title="Ver contraseña">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="rememberRep">
+                            <label class="form-check-label small text-muted" for="rememberRep">Recordar sesión</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-login-submit">
+                        <span>Iniciar Sesión</span>
+                        <i class="bi bi-arrow-right-short fs-4"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="modal-login-footer">
+                <i class="bi bi-lock-fill me-1 text-primary"></i> Área restringida únicamente a personal autorizado
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts de Funcionamiento de Modales de Autenticación -->
+<script>
+    // Mostrar u ocultar contraseña
+    function togglePasswordVisibility(inputId, btn) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+        var icon = btn ? btn.querySelector('i') : null;
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (icon) {
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            }
+        } else {
+            input.type = 'password';
+            if (icon) {
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Auto-cerrar alertas dismissibles
+        document.querySelectorAll(".alert-dismissible").forEach(function (alertEl) {
+            setTimeout(function () {
+                var instancia = bootstrap.Alert.getOrCreateInstance(alertEl);
+                instancia.close();
+            }, 4500);
+        });
+
+        // Abrir modal si el servidor lo especificó en TempData
+        @if (TempData["AbrirModal"] != null)
+        {
+            <text>
+            var serverModalId = "@TempData["AbrirModal"]";
+            var serverModalEl = document.getElementById(serverModalId);
+            if (serverModalEl && typeof bootstrap !== "undefined") {
+                bootstrap.Modal.getOrCreateInstance(serverModalEl).show();
+            }
+            </text>
+        }
+
+        // Envío AJAX de formularios de login para evitar recargas completas o redirecciones erróneas
+        document.querySelectorAll(".modal-login-form").forEach(function (form) {
+            form.addEventListener("submit", async function (e) {
+                e.preventDefault();
+
+                var submitBtn = form.querySelector("button[type='submit']");
+                var originalHtml = submitBtn ? submitBtn.innerHTML : "";
+                var bodyEl = form.closest(".modal-login-body");
+                var alertContainer = bodyEl ? bodyEl.querySelector(".modal-login-alert-container") : null;
+
+                if (alertContainer) alertContainer.innerHTML = "";
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span><span>Verificando...</span>';
+                }
+
+                try {
+                    var formData = new FormData(form);
+                    var response = await fetch(form.action, {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json"
+                        }
+                    });
+
+                    var data = await response.json();
+
+                    if (data.success) {
+                        if (data.redirectUrl) {
+                            window.location.href = data.redirectUrl;
+                            return;
+                        }
+                        if (data.openModal) {
+                            var currentModalEl = form.closest(".modal");
+                            if (currentModalEl && typeof bootstrap !== "undefined") {
+                                bootstrap.Modal.getInstance(currentModalEl)?.hide();
+                            }
+                            var targetModalEl = document.getElementById(data.openModal);
+                            if (targetModalEl && typeof bootstrap !== "undefined") {
+                                var targetAlert = targetModalEl.querySelector(".modal-login-alert-container");
+                                if (targetAlert && data.message) {
+                                    targetAlert.innerHTML = `
+                                        <div class="alert alert-success d-flex align-items-center gap-2 mb-3 py-2 px-3 small rounded-3" role="alert">
+                                            <i class="bi bi-check-circle-fill text-success fs-6 flex-shrink-0"></i>
+                                            <div>${data.message}</div>
+                                        </div>`;
+                                }
+                                bootstrap.Modal.getOrCreateInstance(targetModalEl).show();
+                            }
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalHtml;
+                            }
+                            return;
+                        }
+                    } else {
+                        if (alertContainer) {
+                            alertContainer.innerHTML = `
+                                <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2 px-3 small rounded-3" role="alert">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger fs-6 flex-shrink-0"></i>
+                                    <div>${data.message || "Por favor, valide si el usuario o la contraseña son correctos."}</div>
+                                </div>`;
+                        }
+                        var passInput = form.querySelector("input[type='password']");
+                        if (passInput) {
+                            passInput.value = "";
+                            passInput.focus();
+                        }
+                    }
+                } catch (err) {
+                    form.submit();
+                    return;
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalHtml;
+                    }
+                }
+            });
+        });
+    });
+</script>

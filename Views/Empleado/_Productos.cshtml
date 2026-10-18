@@ -1,0 +1,166 @@
+@model IEnumerable<Drogueria.Models.Producto>
+@{
+    ViewData["Title"] = "Productos";
+    ViewData["ActiveNav"] = "productos";
+    var categorias = (ViewBag.Categorias as IEnumerable<Drogueria.Models.Categoria>) ?? new List<Drogueria.Models.Categoria>();
+}
+
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Exito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@{
+    var total = Model.Count();
+    var activos = Model.Count(p => p.Estado);
+    var inactivos = total - activos;
+    var lowStock = Model.Count(p => p.Stock <= p.StockMinimo && p.Estado);
+}
+
+<div class="emp-page-header">
+    <h1><i class="bi bi-capsule"></i> Productos</h1>
+    <span class="text-muted small">Vista de consulta</span>
+</div>
+
+<div class="emp-stats-row">
+    <div class="emp-stat-card">
+        <div class="emp-stat-icon purple"><i class="bi bi-box-seam"></i></div>
+        <div>
+            <div class="emp-stat-value">@total</div>
+            <div class="emp-stat-label">Total productos</div>
+        </div>
+    </div>
+    <div class="emp-stat-card">
+        <div class="emp-stat-icon green"><i class="bi bi-check-circle"></i></div>
+        <div>
+            <div class="emp-stat-value">@activos</div>
+            <div class="emp-stat-label">Activos</div>
+        </div>
+    </div>
+    <div class="emp-stat-card">
+        <div class="emp-stat-icon red"><i class="bi bi-x-circle"></i></div>
+        <div>
+            <div class="emp-stat-value">@inactivos</div>
+            <div class="emp-stat-label">Inactivos</div>
+        </div>
+    </div>
+    <div class="emp-stat-card">
+        <div class="emp-stat-icon amber"><i class="bi bi-exclamation-triangle"></i></div>
+        <div>
+            <div class="emp-stat-value">@lowStock</div>
+            <div class="emp-stat-label">Stock bajo (≤ mín.)</div>
+        </div>
+    </div>
+</div>
+
+<div class="emp-search-bar">
+    <div class="emp-search-wrap">
+        <i class="bi bi-search"></i>
+        <input type="text" class="emp-search-input" id="empBuscar" placeholder="Buscar producto..." oninput="filtrarProductos()" maxlength="100">
+    </div>
+    <select class="emp-filter-select" id="empCatFilter" onchange="filtrarProductos()">
+        <option value="">Todas las categorías</option>
+        @foreach (var cat in categorias)
+        {
+            <option value="@cat.Nombre">@cat.Nombre</option>
+        }
+    </select>
+    <select class="emp-filter-select" id="empEstadoFilter" onchange="filtrarProductos()">
+        <option value="">Todos los estados</option>
+        <option value="activo">Activos</option>
+        <option value="inactivo">Inactivos</option>
+    </select>
+</div>
+
+<div class="emp-table-wrap">
+    @if (!Model.Any())
+    {
+        <div class="emp-empty-state">
+            <i class="bi bi-inbox d-block"></i>
+            <p>No hay productos registrados.</p>
+        </div>
+    }
+    else
+    {
+        <table class="emp-table" id="empProductosTable">
+            <thead>
+                <tr>
+                    <th>Imagen</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Existencia</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr class="emp-row" data-nombre="@p.Nombre.ToLower()" data-cat="@(p.Categoria?.Nombre ?? "")" data-estado="@(p.Estado ? "activo" : "inactivo")">
+                        <td>
+                            @if (!string.IsNullOrEmpty(p.Imagen))
+                            {
+                                <img src="~/@p.Imagen" alt="@p.Nombre" class="emp-prod-img" />
+                            }
+                            else
+                            {
+                                <div class="emp-prod-img-placeholder"><i class="bi bi-image"></i></div>
+                            }
+                        </td>
+                        <td>
+                            <div class="fw-semibold">@p.Nombre</div>
+                            @if (!string.IsNullOrEmpty(p.Descripcion))
+                            {
+                                <div class="text-muted small" style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@p.Descripcion</div>
+                            }
+                        </td>
+                        <td><span class="text-muted">@(p.Categoria?.Nombre ?? "—")</span></td>
+                        <td class="fw-semibold">$@p.Precio.ToString("N2")</td>
+                        <td>
+                            @if (p.Stock <= p.StockMinimo && p.Estado)
+                            {
+                                <span class="emp-badge low-stock" title="Mínimo configurado: @p.StockMinimo">@p.Stock uds (Bajo)</span>
+                            }
+                            else
+                            {
+                                <span>@p.Stock</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="emp-badge @(p.Estado ? "active" : "inactive")">
+                                @(p.Estado ? "Activo" : "Inactivo")
+                            </span>
+                        </td>
+                        <td class="text-muted small">@p.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<script>
+    function filtrarProductos() {
+        const buscar = document.getElementById('empBuscar').value.toLowerCase();
+        const cat = document.getElementById('empCatFilter').value;
+        const estado = document.getElementById('empEstadoFilter').value;
+        const rows = document.querySelectorAll('.emp-row');
+        rows.forEach(r => {
+            const matchNombre = r.dataset.nombre.includes(buscar);
+            const matchCat = !cat || r.dataset.cat === cat;
+            const matchEstado = !estado || r.dataset.estado === estado;
+            r.style.display = (matchNombre && matchCat && matchEstado) ? '' : 'none';
+        });
+    }
+</script>

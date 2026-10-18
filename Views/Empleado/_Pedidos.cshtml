@@ -1,0 +1,840 @@
+@model IEnumerable<Drogueria.Models.Pedido>
+@{
+    ViewData["Title"] = "Pedidos";
+    ViewData["ActiveNav"] = "pedidos";
+}
+
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["Exito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@{
+    var pendientes = Model.Count(p => p.Estado == "Pendiente");
+    var confirmados = Model.Count(p => p.Estado == "Confirmado");
+    var enCamino = Model.Count(p => p.Estado == "En camino");
+    var entregados = Model.Count(p => p.Estado == "Entregado");
+    var cancelados = Model.Count(p => p.Estado == "Cancelado");
+    var repartidores = ViewBag.Repartidores as List<Drogueria.Models.Usuario> ?? new List<Drogueria.Models.Usuario>();
+}
+
+<!-- Leaflet CSS para el mapa de seguimiento del administrador -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="ped-header">
+    <h1><i class="bi bi-clipboard-check"></i> Pedidos</h1>
+    <span class="text-muted small">@Model.Count() pedidos en total</span>
+</div>
+
+<div class="ped-stats-row">
+    <div class="ped-stat-card">
+        <div class="ped-stat-icon yellow"><i class="bi bi-clock-history"></i></div>
+        <div><div class="ped-stat-value">@pendientes</div><div class="ped-stat-label">Pendientes</div></div>
+    </div>
+    <div class="ped-stat-card">
+        <div class="ped-stat-icon purple"><i class="bi bi-check2-circle"></i></div>
+        <div><div class="ped-stat-value">@confirmados</div><div class="ped-stat-label">Confirmados</div></div>
+    </div>
+    <div class="ped-stat-card">
+        <div class="ped-stat-icon orange" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;"><i class="bi bi-truck"></i></div>
+        <div><div class="ped-stat-value">@enCamino</div><div class="ped-stat-label">En camino</div></div>
+    </div>
+    <div class="ped-stat-card">
+        <div class="ped-stat-icon green"><i class="bi bi-check-all"></i></div>
+        <div><div class="ped-stat-value">@entregados</div><div class="ped-stat-label">Entregados</div></div>
+    </div>
+    <div class="ped-stat-card">
+        <div class="ped-stat-icon red"><i class="bi bi-x-circle"></i></div>
+        <div><div class="ped-stat-value">@cancelados</div><div class="ped-stat-label">Cancelados</div></div>
+    </div>
+</div>
+
+<div class="ped-search-bar">
+    <div class="ped-search-wrap">
+        <i class="bi bi-search"></i>
+        <input type="text" class="ped-search-input" id="pedBuscar" placeholder="Buscar por cliente o ID..." oninput="filtrarPedidos()" maxlength="100">
+    </div>
+    <select class="ped-filter-select" id="pedEstadoFilter" onchange="filtrarPedidos()">
+        <option value="">Todos los estados</option>
+        <option value="Pendiente">Pendiente</option>
+        <option value="Confirmado">Confirmado</option>
+        <option value="En camino">En camino</option>
+        <option value="Entregado">Entregado</option>
+        <option value="Cancelado">Cancelado</option>
+    </select>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="ped-empty">
+        <i class="bi bi-clipboard-x"></i>
+        <p>No hay pedidos registrados aún.</p>
+    </div>
+}
+else
+{
+    <div class="ped-table-wrap">
+        <table class="ped-table" id="pedTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th>Repartidor</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Cambiar estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    var badgeClass = p.Estado.ToLower().Replace(" ", "-");
+                    var shortId = p.Id.ToString().Substring(0, 8).ToUpper();
+                    var clientName = p.Usuario != null
+                        ? $"{p.Usuario.Nombre} {p.Usuario.Apellido}".Trim()
+                        : "Cliente desconocido";
+                    var repName = p.Repartidor != null
+                        ? $"{p.Repartidor.Nombre} {p.Repartidor.Apellido}".Trim()
+                        : null;
+
+                    <tr class="ped-row" data-cliente="@clientName.ToLower()" data-id="@shortId.ToLower()" data-estado="@p.Estado">
+                        <td><code class="small">@shortId</code></td>
+                        <td class="fw-semibold">@clientName</td>
+                        <td class="text-muted small">@p.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>
+                            <form asp-controller="Empleado" asp-action="AsignarRepartidor" method="post" class="d-flex align-items-center gap-1">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <select name="repartidorId" class="form-select form-select-sm" style="max-width: 150px; font-size: 12px; border-radius: 8px;" onchange="this.form.submit()">
+                                    <option value="">-- Sin asignar --</option>
+                                    @foreach (var rep in repartidores)
+                                    {
+                                        var estadoIcon = rep.EstaEnLinea ? "🟢 " : "⚪ ";
+                                        var estadoTexto = rep.EstaEnLinea ? "" : " (En descanso)";
+                                        <option value="@rep.Uuid" selected="@(p.RepartidorId == rep.Uuid)">
+                                            @estadoIcon@rep.Nombre @rep.Apellido@estadoTexto
+                                        </option>
+                                    }
+                                </select>
+                            </form>
+                        </td>
+                        <td>@p.Detalles.Count</td>
+                        <td class="fw-bold">$@p.Total.ToString("N2")</td>
+                        <td>
+                            <span class="ped-badge @badgeClass" style="@(p.Estado == "En camino" ? "background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3);" : "")">
+                                @if (p.Estado == "Pendiente") { <i class="bi bi-clock"></i> }
+                                else if (p.Estado == "Confirmado") { <i class="bi bi-check2"></i> }
+                                else if (p.Estado == "En camino") { <i class="bi bi-truck"></i> }
+                                else if (p.Estado == "Entregado") { <i class="bi bi-check-all"></i> }
+                                else { <i class="bi bi-x-lg"></i> }
+                                @p.Estado
+                            </span>
+                        </td>
+                        <td>
+                            <form asp-controller="Empleado" asp-action="CambiarEstadoPedido" method="post" class="ped-estado-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@p.Id" />
+                                <select name="estado" class="ped-estado-select">
+                                    <option value="Pendiente" selected="@(p.Estado == "Pendiente")">Pendiente</option>
+                                    <option value="Confirmado" selected="@(p.Estado == "Confirmado")">Confirmado</option>
+                                    <option value="En camino" selected="@(p.Estado == "En camino")">En camino</option>
+                                    <option value="Entregado" selected="@(p.Estado == "Entregado")">Entregado</option>
+                                    <option value="Cancelado" selected="@(p.Estado == "Cancelado")">Cancelado</option>
+                                </select>
+                                <button type="submit" class="ped-btn-change" title="Cambiar estado">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                </button>
+                            </form>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm"
+                                    onclick="abrirSeguimientoAdmin('@p.Id')">
+                                <i class="bi bi-radar"></i> Ver más
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="ped-details-row" id="det-@p.Id">
+                        <td colspan="9">
+
+                            <div class="ped-details-inner">
+                                <table class="ped-detail-table">
+                                    <thead>
+                                        <tr><th></th><th>Producto</th><th>Precio unit.</th><th>Cantidad</th><th>Subtotal</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var d in p.Detalles)
+                                        {
+                                            <tr>
+                                                <td>
+                                                    @if (!string.IsNullOrEmpty(d.Producto?.Imagen))
+                                                    {
+                                                        <img src="~/@d.Producto.Imagen" class="ped-detail-img" alt="" />
+                                                    }
+                                                </td>
+                                                <td>@(d.Producto?.Nombre ?? "Producto eliminado")</td>
+                                                <td>$@d.PrecioUnitario.ToString("N2")</td>
+                                                <td>@d.Cantidad</td>
+                                                <td class="fw-bold">$@d.Subtotal.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- ===== MODAL DE SEGUIMIENTO EN VIVO Y DETALLE (ADMINISTRADOR) ===== -->
+<div class="modal fade" id="modalSeguimientoAdmin" tabindex="-1" aria-labelledby="modalSeguimientoAdminLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: var(--bg-card, #fff);">
+            
+            <!-- Modal Header -->
+            <div class="modal-header border-0 px-4 py-3" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff;">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div style="background: rgba(255,255,255,0.12); border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-radar text-warning fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h5 class="modal-title fw-bold text-white mb-0" id="modalSeguimientoAdminLabel">
+                                Seguimiento de Pedido <span class="font-monospace text-warning" id="modalAdminShortId">#---</span>
+                            </h5>
+                            <span class="badge rounded-pill px-3 py-1 font-monospace fw-bold" id="modalAdminEstadoBadge">---</span>
+                        </div>
+                        <div class="text-white-50 small mt-1">
+                            <i class="bi bi-calendar-event me-1"></i><span id="modalAdminFecha">---</span>
+                            <span class="mx-2">•</span>
+                            <i class="bi bi-shield-lock-fill text-info me-1"></i>Panel de Monitoreo en Tiempo Real
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-4" style="background: var(--bg-body, #f8fafc);">
+                <div class="row g-4">
+                    
+                    <!-- COLUMNA IZQUIERDA: Información del pedido y productos -->
+                    <div class="col-12 col-lg-6">
+                        
+                        <!-- Tarjeta Datos de Entrega y Cliente -->
+                        <div class="card border-0 shadow-sm rounded-4 mb-3" style="background: #fff;">
+                            <div class="card-header bg-transparent border-0 pt-3 pb-2 px-3 d-flex align-items-center justify-content-between">
+                                <span class="fw-bold small text-uppercase text-muted" style="letter-spacing: .5px;">
+                                    <i class="bi bi-person-lines-fill text-primary me-1"></i> Datos de Entrega
+                                </span>
+                                <span class="badge bg-light text-dark border font-monospace" id="modalAdminCodigoEntregaBox" style="display:none;">
+                                    Código: <strong class="text-primary" id="modalAdminCodigoEntrega">------</strong>
+                                </span>
+                            </div>
+                            <div class="card-body px-3 py-2">
+                                <div class="mb-2">
+                                    <div class="fw-bold text-dark fs-6" id="modalAdminCliente">---</div>
+                                    <div class="text-muted small">
+                                        <i class="bi bi-envelope me-1"></i><span id="modalAdminEmail">---</span>
+                                        <span class="mx-2">•</span>
+                                        <i class="bi bi-telephone me-1"></i><span id="modalAdminTelefono">---</span>
+                                    </div>
+                                </div>
+                                <div class="p-2-5 rounded-3 border bg-light small mb-2">
+                                    <div class="text-muted text-uppercase fw-bold" style="font-size: 10px;">Dirección Registrada</div>
+                                    <div class="fw-semibold text-dark mt-1" id="modalAdminDireccion">---</div>
+                                </div>
+
+                                <!-- Repartidor Asignado -->
+                                <div class="p-2-5 rounded-3 border bg-warning-subtle text-warning-emphasis small d-flex align-items-center gap-3">
+                                    <div style="width:38px;height:38px;border-radius:50%;background:#f59e0b;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="bi bi-truck fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="text-uppercase fw-bold" style="font-size: 10px;">Repartidor Responsable</div>
+                                        <div class="fw-bold text-dark" id="modalAdminRepartidorNombre">Sin asignar</div>
+                                        <div class="text-muted" style="font-size: 11px;" id="modalAdminRepartidorInfo">---</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta Productos del Pedido -->
+                        <div class="card border-0 shadow-sm rounded-4" style="background: #fff;">
+                            <div class="card-header bg-transparent border-0 pt-3 pb-2 px-3 d-flex align-items-center justify-content-between">
+                                <span class="fw-bold small text-uppercase text-muted" style="letter-spacing: .5px;">
+                                    <i class="bi bi-bag-check-fill text-success me-1"></i> Productos Comprados
+                                </span>
+                                <span class="fw-bold text-primary" id="modalAdminTotal">Total: $0.00</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div style="max-height: 220px; overflow-y: auto; padding: 0 16px;">
+                                    <table class="table table-sm align-middle mb-0" style="font-size: 13px;">
+                                        <tbody id="modalAdminProductosList">
+                                            <!-- Items agregados por JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="p-3 border-top bg-light rounded-bottom-4 d-flex justify-content-between align-items-center">
+                                    <div class="small">
+                                        <span class="text-muted">Método de pago:</span>
+                                        <strong class="text-dark ms-1" id="modalAdminMetodoPago">---</strong>
+                                    </div>
+                                    <div class="fw-bold fs-6 text-primary" id="modalAdminTotalFooter">$0.00</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- COLUMNA DERECHA: Ubicación GPS en Vivo y Chat en Tiempo Real -->
+                    <div class="col-12 col-lg-6">
+
+                        <!-- Tarjeta Mapa GPS -->
+                        <div class="card border-0 shadow-sm rounded-4 mb-3" style="background: #fff; overflow: hidden;">
+                            <div class="card-header bg-transparent border-0 pt-3 pb-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <span class="fw-bold small text-uppercase text-muted" style="letter-spacing: .5px;">
+                                    <i class="bi bi-geo-alt-fill text-danger me-1"></i> Ubicación del Repartidor
+                                </span>
+                                <span class="badge bg-warning text-dark font-monospace" id="modalAdminGpsBadge">
+                                    <i class="bi bi-stopwatch me-1"></i> Monitoreo inactivo
+                                </span>
+                            </div>
+                            <div class="card-body p-0">
+                                <!-- Mapa Leaflet -->
+                                <div id="admin-map" style="height: 230px; width: 100%; display: none;"></div>
+                                <!-- Placeholder cuando no amerita mapa -->
+                                <div id="admin-map-placeholder" class="p-4 text-center text-muted" style="background: #f8fafc; border-top: 1px solid #f1f5f9;">
+                                    <i class="bi bi-map fs-1 opacity-25 d-block mb-2"></i>
+                                    <div class="fw-semibold text-dark" id="adminMapPlaceholderTitle">El mapa se activa cuando el pedido esté "En camino"</div>
+                                    <small id="adminMapPlaceholderDesc">Actualmente el pedido se encuentra en preparación o sin repartidor en ruta activa.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta Chat en Tiempo Real (Solo Lectura) -->
+                        <div class="card border-0 shadow-sm rounded-4" style="background: #fff; overflow: hidden;">
+                            <div class="card-header border-0 pt-3 pb-2 px-3 d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-chat-dots-fill text-white fs-5"></i>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-white" style="font-size: 14px;">Chat en Vivo Cliente - Repartidor</h6>
+                                        <small class="text-white-50" style="font-size: 11px;">Monitoreo en tiempo real</small>
+                                    </div>
+                                </div>
+                                <span class="badge rounded-pill bg-white text-dark fw-bold" style="font-size: 10.5px;">
+                                    <i class="bi bi-eye-fill text-primary me-1"></i> Solo Lectura
+                                </span>
+                            </div>
+
+                            <div class="card-body p-0">
+                                <!-- Lista de Mensajes -->
+                                <div id="modalAdminChatMensajes" style="height: 210px; overflow-y: auto; padding: 14px; background: #f8fafc; display: flex; flex-direction: column; gap: 8px;">
+                                    <div class="text-center text-muted small py-4" id="modalAdminChatVacio">
+                                        <i class="bi bi-chat-square-dots fs-3 d-block mb-1 opacity-25"></i>
+                                        No hay mensajes registrados en este pedido
+                                    </div>
+                                </div>
+
+                                <!-- Footer bloqueado para el administrador -->
+                                <div class="p-2-5 bg-white border-top">
+                                    <div class="alert alert-secondary py-2 px-3 mb-0 rounded-pill d-flex align-items-center justify-content-center gap-2" style="font-size: 12px; background: #f1f5f9; border-color: #e2e8f0; color: #64748b;">
+                                        <i class="bi bi-lock-fill text-secondary"></i>
+                                        <span><strong>Modo Supervisión:</strong> Estás en modo solo lectura. No es posible enviar mensajes como administrador.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer border-0 px-4 py-2-5 bg-white">
+                <button type="button" class="btn btn-secondary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+<script>
+    // ── DICCIONARIO DE PEDIDOS SERIALIZADO ──────────────────────────────
+    const pedidosData = {
+        @foreach (var p in Model)
+        {
+            var partesDirP = (p.DireccionEntrega ?? "").Split('|');
+            var clientNameP = p.Usuario != null ? $"{p.Usuario.Nombre} {p.Usuario.Apellido}".Trim() : "Cliente";
+            var clientEmailP = p.Usuario?.Email ?? "";
+            var dirCalleP = partesDirP.Length > 1 ? partesDirP[1].Trim() : (p.DireccionEntrega ?? "");
+            var dirTelP = partesDirP.Length > 2 ? partesDirP[2].Trim() : "";
+            if (dirTelP.Contains("| GEO:")) dirTelP = dirTelP.Split("| GEO:")[0].Trim();
+            var geoSegP = partesDirP.FirstOrDefault(s => s.TrimStart().StartsWith("GEO:"));
+            var geoQueryP = geoSegP != null ? geoSegP.Replace("GEO:", "").Trim() : dirCalleP;
+
+            <text>
+            "@p.Id": {
+                id: "@p.Id",
+                shortId: "@p.Id.ToString().Substring(0, 8).ToUpper()",
+                fecha: "@p.Fecha.ToString("dd/MM/yyyy HH:mm")",
+                estado: "@p.Estado",
+                total: "@p.Total.ToString("N2")",
+                metodoPago: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(p.MetodoPago ?? "Pago en línea"))",
+                codigo: "@p.CodigoConfirmacion",
+                cliente: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(clientNameP))",
+                clienteEmail: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(clientEmailP))",
+                clienteTel: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(dirTelP.Replace("Tel:", "").Trim()))",
+                direccion: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(dirCalleP))",
+                geoQuery: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(geoQueryP))",
+                repartidor: @(p.Repartidor != null ? Html.Raw($"{{ nombre: '{System.Web.HttpUtility.JavaScriptStringEncode(p.Repartidor.Nombre + " " + p.Repartidor.Apellido)}', telefono: '{p.Repartidor.Telefono}', vehiculo: '{p.Repartidor.TipoVehiculo}', placa: '{p.Repartidor.Placa}' }}") : "null"),
+                repLat: @(p.LatitudRepartidor.HasValue ? p.LatitudRepartidor.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "null"),
+                repLng: @(p.LongitudRepartidor.HasValue ? p.LongitudRepartidor.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "null"),
+                detalles: [
+                    @foreach (var d in p.Detalles)
+                    {
+                        var imgProd = !string.IsNullOrEmpty(d.Producto?.Imagen)
+                            ? (d.Producto.Imagen.StartsWith("http") || d.Producto.Imagen.StartsWith("/") ? d.Producto.Imagen : "/" + d.Producto.Imagen)
+                            : "";
+                        <text>
+                        {
+                            nombre: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(d.Producto?.Nombre ?? "Producto"))",
+                            imagen: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(imgProd))",
+                            cantidad: @d.Cantidad,
+                            precio: "@d.PrecioUnitario.ToString("N2")",
+                            subtotal: "@d.Subtotal.ToString("N2")"
+                        },
+                        </text>
+                    }
+                ]
+            },
+            </text>
+        }
+    };
+
+    // ── CONEXIÓN SIGNALR GLOBAL ─────────────────────────────────────────
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/hubs/ubicacion")
+        .withAutomaticReconnect()
+        .build();
+
+    connection.start().catch(err => console.error("SignalR Admin:", err));
+
+    let pedidoActivoAdmin = null;
+    let modalAdminInstance = null;
+    let adminMap = null;
+    let adminRepMarker = null;
+    let adminHomeMarker = null;
+    let adminRouteLayer = null;
+    let adminDestLat = null;
+    let adminDestLng = null;
+
+    function haversineAdmin(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    }
+
+    // ── ABRIR MODAL DE SEGUIMIENTO ─────────────────────────────────────
+    function abrirSeguimientoAdmin(pedidoId) {
+        const ped = pedidosData[pedidoId];
+        if (!ped) return;
+
+        pedidoActivoAdmin = pedidoId;
+
+        // Llenar información de cabecera
+        document.getElementById('modalAdminShortId').textContent = '#' + ped.shortId;
+        document.getElementById('modalAdminFecha').textContent = ped.fecha;
+
+        const badge = document.getElementById('modalAdminEstadoBadge');
+        badge.textContent = ped.estado;
+        badge.className = 'badge rounded-pill px-3 py-1 font-monospace fw-bold ' +
+            (ped.estado === 'Entregado' ? 'bg-success' :
+             ped.estado === 'En camino' ? 'bg-warning text-dark' :
+             ped.estado === 'Cancelado' ? 'bg-danger' : 'bg-primary');
+
+        // Llenar datos de cliente
+        document.getElementById('modalAdminCliente').textContent = ped.cliente;
+        document.getElementById('modalAdminEmail').textContent = ped.clienteEmail || 'Sin email registrado';
+        document.getElementById('modalAdminTelefono').textContent = ped.clienteTel || 'Sin teléfono';
+        document.getElementById('modalAdminDireccion').textContent = ped.direccion || 'Dirección registrada';
+
+        // Código de entrega
+        const boxCod = document.getElementById('modalAdminCodigoEntregaBox');
+        if (ped.codigo && ped.codigo.trim() !== '') {
+            document.getElementById('modalAdminCodigoEntrega').textContent = ped.codigo;
+            boxCod.style.display = 'inline-block';
+        } else {
+            boxCod.style.display = 'none';
+        }
+
+        // Repartidor
+        const repNomEl = document.getElementById('modalAdminRepartidorNombre');
+        const repInfoEl = document.getElementById('modalAdminRepartidorInfo');
+        if (ped.repartidor) {
+            repNomEl.textContent = ped.repartidor.nombre;
+            repInfoEl.innerHTML = `<i class="bi bi-telephone me-1"></i>${ped.repartidor.telefono || 'Sin tel'} · Vehículo: <strong>${ped.repartidor.vehiculo || 'Moto'}</strong> ${ped.repartidor.placa ? `[${ped.repartidor.placa}]` : ''}`;
+        } else {
+            repNomEl.textContent = 'Sin repartidor asignado';
+            repInfoEl.textContent = 'Asigna un repartidor en la tabla de pedidos';
+        }
+
+        // Productos
+        document.getElementById('modalAdminTotal').textContent = 'Total: $' + ped.total;
+        document.getElementById('modalAdminTotalFooter').textContent = '$' + ped.total;
+        document.getElementById('modalAdminMetodoPago').textContent = ped.metodoPago || 'Pago en línea';
+
+        const tbody = document.getElementById('modalAdminProductosList');
+        tbody.innerHTML = '';
+        ped.detalles.forEach(d => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="width: 44px;">
+                    ${d.imagen ? `<img src="${d.imagen}" style="width:34px;height:34px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;" onerror="this.style.display='none'" />` : '<i class="bi bi-capsule fs-4 text-muted"></i>'}
+                </td>
+                <td>
+                    <div class="fw-semibold text-dark">${d.nombre}</div>
+                    <small class="text-muted">${d.cantidad} u. × $${d.precio}</small>
+                </td>
+                <td class="text-end fw-bold text-primary">$${d.subtotal}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // ── CHAT ──
+        limpiarChatAdmin();
+        if (connection && connection.state === signalR.HubConnectionState.Connected) {
+            connection.invoke('JoinOrderGroup', pedidoId).catch(console.error);
+            connection.invoke('ObtenerHistorialChat', pedidoId)
+                .then(historial => {
+                    if (historial && historial.length > 0) {
+                        limpiarChatAdmin();
+                        historial.forEach(m => agregarBurbujaAdmin(m.remitente, m.mensaje, m.hora));
+                    }
+                })
+                .catch(err => console.warn('Historial chat:', err));
+        }
+
+        // ── MAPA GPS ──
+        configurarMapaAdmin(ped);
+
+        // Mostrar modal
+        modalAdminInstance = modalAdminInstance || new bootstrap.Modal(document.getElementById('modalSeguimientoAdmin'));
+        modalAdminInstance.show();
+
+        // Ajustar Leaflet al abrir
+        setTimeout(() => {
+            if (adminMap) adminMap.invalidateSize();
+        }, 350);
+    }
+
+    function configurarMapaAdmin(ped) {
+        const mapEl = document.getElementById('admin-map');
+        const placeEl = document.getElementById('admin-map-placeholder');
+        const badge = document.getElementById('modalAdminGpsBadge');
+
+        const ameritaMapa = ped.estado === 'En camino' || (ped.repLat != null && ped.repLng != null);
+
+        if (!ameritaMapa) {
+            mapEl.style.display = 'none';
+            placeEl.style.display = 'block';
+            if (ped.estado === 'Entregado') {
+                document.getElementById('adminMapPlaceholderTitle').textContent = 'Pedido Entregado';
+                document.getElementById('adminMapPlaceholderDesc').textContent = 'El pedido ya fue completado y entregado al cliente.';
+                badge.className = 'badge bg-success text-white font-monospace';
+                badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Entregado';
+            } else if (ped.estado === 'Cancelado') {
+                document.getElementById('adminMapPlaceholderTitle').textContent = 'Pedido Cancelado';
+                document.getElementById('adminMapPlaceholderDesc').textContent = 'Este pedido se encuentra cancelado.';
+                badge.className = 'badge bg-danger text-white font-monospace';
+                badge.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>Cancelado';
+            } else {
+                document.getElementById('adminMapPlaceholderTitle').textContent = 'El mapa se activa cuando el pedido esté "En camino"';
+                document.getElementById('adminMapPlaceholderDesc').textContent = 'Actualmente el pedido se encuentra en estado ' + ped.estado + '.';
+                badge.className = 'badge bg-secondary text-white font-monospace';
+                badge.innerHTML = '<i class="bi bi-clock me-1"></i>En espera de ruta';
+            }
+            return;
+        }
+
+        // Si amerita mapa
+        placeEl.style.display = 'none';
+        mapEl.style.display = 'block';
+        badge.className = 'badge bg-warning text-dark font-monospace';
+        badge.innerHTML = '<i class="bi bi-stopwatch me-1"></i>Calculando tiempo...';
+
+        const lat0 = ped.repLat || 4.60971;
+        const lng0 = ped.repLng || -74.08175;
+
+        if (!adminMap) {
+            adminMap = L.map('admin-map').setView([lat0, lng0], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(adminMap);
+        } else {
+            adminMap.setView([lat0, lng0], 15);
+            if (adminRouteLayer) { adminMap.removeLayer(adminRouteLayer); adminRouteLayer = null; }
+            if (adminRepMarker) { adminMap.removeLayer(adminRepMarker); adminRepMarker = null; }
+            if (adminHomeMarker) { adminMap.removeLayer(adminHomeMarker); adminHomeMarker = null; }
+        }
+
+        const repIcon = L.divIcon({
+            className: '',
+            html: '<div style="background:#f59e0b;color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(245,158,11,.45);border:2px solid white;"><i class="bi bi-truck fs-5"></i></div>',
+            iconSize: [36, 36], iconAnchor: [18, 18]
+        });
+        adminRepMarker = L.marker([lat0, lng0], { icon: repIcon })
+            .addTo(adminMap)
+            .bindPopup(`<b>${ped.repartidor ? ped.repartidor.nombre : 'Repartidor'}</b><br>En camino`);
+
+        // Geocodificar destino
+        const q = ped.geoQuery || ped.direccion;
+        if (q && q.trim() !== '') {
+            fetch('/Direccion/Geocodificar?' + new URLSearchParams({ direccion: q, ciudad: '' }), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.lat && data.lon) {
+                    ponerMarcadorDestinoAdmin(data.lat, data.lon, ped.cliente, lat0, lng0);
+                } else {
+                    ponerMarcadorDestinoAdmin(lat0 + 0.009, lng0 + 0.012, ped.cliente, lat0, lng0);
+                }
+            })
+            .catch(() => {
+                ponerMarcadorDestinoAdmin(lat0 + 0.009, lng0 + 0.012, ped.cliente, lat0, lng0);
+            });
+        } else {
+            ponerMarcadorDestinoAdmin(lat0 + 0.009, lng0 + 0.012, ped.cliente, lat0, lng0);
+        }
+    }
+
+    function ponerMarcadorDestinoAdmin(dLat, dLng, cliente, repLat, repLng) {
+        adminDestLat = dLat;
+        adminDestLng = dLng;
+
+        const homeIcon = L.divIcon({
+            className: '',
+            html: '<div style="background:#ef4444;color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(239,68,68,.4);border:2px solid white;"><i class="bi bi-house-fill" style="font-size:16px;"></i></div>',
+            iconSize: [34, 34], iconAnchor: [17, 17]
+        });
+        adminHomeMarker = L.marker([dLat, dLng], { icon: homeIcon })
+            .addTo(adminMap)
+            .bindPopup(`<b>Destino: ${cliente}</b>`);
+
+        trazarRutaAdmin(repLat, repLng, dLat, dLng);
+    }
+
+    function trazarRutaAdmin(oLat, oLng, dLat, dLng) {
+        fetch(`/Direccion/CalcularRuta?origenLat=${oLat}&origenLng=${oLng}&destinoLat=${dLat}&destinoLng=${dLng}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(rd => {
+            const badge = document.getElementById('modalAdminGpsBadge');
+            if (rd.success) {
+                if (adminRouteLayer && adminMap) adminMap.removeLayer(adminRouteLayer);
+                adminRouteLayer = L.geoJSON(rd.geometry, {
+                    style: { color: '#2563eb', weight: 5, opacity: .85, lineJoin: 'round' }
+                }).addTo(adminMap);
+                adminMap.fitBounds(adminRouteLayer.getBounds(), { padding: [30, 30], maxZoom: 16 });
+
+                if (badge) {
+                    badge.innerHTML = `<i class="bi bi-stopwatch-fill me-1"></i>Llegada: <strong>${rd.tiempoTexto}</strong> (${rd.distanciaTexto})`;
+                    badge.className = 'badge bg-success text-white font-monospace px-3 py-1-5';
+                }
+            } else {
+                aplicarFallbackAdmin(oLat, oLng, dLat, dLng);
+            }
+        })
+        .catch(() => aplicarFallbackAdmin(oLat, oLng, dLat, dLng));
+    }
+
+    function aplicarFallbackAdmin(oLat, oLng, dLat, dLng) {
+        const distKm = Math.max(0.6, Math.round(haversineAdmin(oLat, oLng, dLat, dLng) * 10) / 10);
+        const durMin = Math.max(8, Math.round(distKm * 4 + 7));
+        const badge = document.getElementById('modalAdminGpsBadge');
+        if (badge) {
+            badge.innerHTML = `<i class="bi bi-stopwatch-fill me-1"></i>Llegada: <strong>~${durMin} min</strong> (~${distKm} km)`;
+            badge.className = 'badge bg-success text-white font-monospace px-3 py-1-5';
+        }
+        if (!adminRouteLayer && adminMap) {
+            adminRouteLayer = L.polyline([[oLat, oLng], [dLat, dLng]], {
+                color: '#2563eb', weight: 4, opacity: 0.7, dashArray: '6, 8'
+            }).addTo(adminMap);
+            adminMap.fitBounds(adminRouteLayer.getBounds(), { padding: [35, 35], maxZoom: 15 });
+        }
+    }
+
+    // ── FUNCIONES DE CHAT (SOLO LECTURA) ───────────────────────────────
+    function limpiarChatAdmin() {
+        const caja = document.getElementById('modalAdminChatMensajes');
+        caja.innerHTML = `
+            <div class="text-center text-muted small py-4" id="modalAdminChatVacio">
+                <i class="bi bi-chat-square-dots fs-3 d-block mb-1 opacity-25"></i>
+                No hay mensajes intercambiados en este pedido todavía
+            </div>`;
+    }
+
+    function agregarBurbujaAdmin(remitente, mensaje, hora) {
+        const vacio = document.getElementById('modalAdminChatVacio');
+        if (vacio) vacio.remove();
+
+        const ped = pedidosData[pedidoActivoAdmin];
+        const esCliente = ped && ped.cliente && remitente.toLowerCase().includes(ped.cliente.toLowerCase().split(' ')[0]);
+
+        const caja = document.getElementById('modalAdminChatMensajes');
+        const burbuja = document.createElement('div');
+        burbuja.style.cssText = `display:flex; flex-direction:column; align-items:${esCliente ? 'flex-start' : 'flex-end'}; animation: fadeInUp .2s ease;`;
+
+        const globo = document.createElement('div');
+        globo.style.cssText = `
+            max-width: 78%; padding: 8px 12px; border-radius: ${esCliente ? '16px 16px 16px 4px' : '16px 16px 4px 16px'};
+            background: ${esCliente ? '#ffffff' : 'linear-gradient(135deg, #f59e0b, #d97706)'};
+            color: ${esCliente ? '#1e293b' : '#ffffff'}; font-size: 13px; line-height: 1.4;
+            box-shadow: 0 2px 6px rgba(0,0,0,.06); border: ${esCliente ? '1px solid #e2e8f0' : 'none'};`;
+        globo.textContent = mensaje;
+
+        const meta = document.createElement('div');
+        meta.style.cssText = 'font-size: 10px; color: #94a3b8; margin-top: 3px;';
+        meta.innerHTML = `<span class="fw-semibold" style="color: ${esCliente ? '#6366f1' : '#d97706'};">${remitente}</span> · ${hora}`;
+
+        burbuja.appendChild(globo);
+        burbuja.appendChild(meta);
+        caja.appendChild(burbuja);
+        caja.scrollTop = caja.scrollHeight;
+    }
+
+    // ── LISTENERS SIGNALR EN TIEMPO REAL ───────────────────────────────
+    connection.on('ReceiveLocation', function (pid, lat, lng) {
+        if (pid !== pedidoActivoAdmin) return;
+        if (adminRepMarker) adminRepMarker.setLatLng([lat, lng]);
+        if (adminDestLat != null && adminDestLng != null) {
+            trazarRutaAdmin(lat, lng, adminDestLat, adminDestLng);
+        }
+    });
+
+    connection.on('ReceiveLocationWithRoute', function (pid, lat, lng, tiempo, dist) {
+        if (pid !== pedidoActivoAdmin) return;
+        if (adminRepMarker) adminRepMarker.setLatLng([lat, lng]);
+        const badge = document.getElementById('modalAdminGpsBadge');
+        if (badge && tiempo) {
+            badge.innerHTML = `<i class="bi bi-stopwatch-fill me-1"></i>Llegada: <strong>${tiempo}</strong> (${dist || ''})`;
+            badge.className = 'badge bg-success text-white font-monospace px-3 py-1-5';
+        }
+        if (adminDestLat != null && adminDestLng != null) {
+            trazarRutaAdmin(lat, lng, adminDestLat, adminDestLng);
+        }
+    });
+
+    connection.on('RecibirMensajeChat', function (pid, remitente, mensaje, hora) {
+        if (pid === pedidoActivoAdmin) {
+            agregarBurbujaAdmin(remitente, mensaje, hora);
+        }
+    });
+
+    // ── FILTROS Y ACCIONES DE LA TABLA ─────────────────────────────────
+    function toggleDetalles(id) {
+        const row = document.getElementById('det-' + id);
+        if (row) row.classList.toggle('show');
+    }
+
+    function filtrarPedidos() {
+        const buscar = document.getElementById('pedBuscar').value.toLowerCase();
+        const estado = document.getElementById('pedEstadoFilter').value;
+        const rows = document.querySelectorAll('.ped-row');
+        rows.forEach(r => {
+            const matchCliente = r.dataset.cliente.includes(buscar) || r.dataset.id.includes(buscar);
+            const matchEstado = !estado || r.dataset.estado === estado;
+            const show = matchCliente && matchEstado;
+            r.style.display = show ? '' : 'none';
+            const nextRow = r.nextElementSibling;
+            if (nextRow && nextRow.classList.contains('ped-details-row')) {
+                if (!show) {
+                    nextRow.classList.remove('show');
+                    nextRow.style.display = 'none';
+                } else {
+                    nextRow.style.display = '';
+                }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Asignar Repartidor via AJAX
+        document.querySelectorAll('form[action*="AsignarRepartidor"]').forEach(form => {
+            const select = form.querySelector('select[name="repartidorId"]');
+            if (select) {
+                select.removeAttribute('onchange');
+                select.addEventListener('change', async function () {
+                    const res = await window.postFormAjax(form.action, new FormData(form));
+                    if (res.success) {
+                        window.showAppToast(res.message || 'Repartidor asignado correctamente.', 'success');
+                    } else {
+                        window.showAppToast(res.message || 'Error al asignar repartidor.', 'error');
+                    }
+                });
+            }
+        });
+
+        // Cambiar Estado Pedido via AJAX
+        document.querySelectorAll('.ped-estado-form').forEach(form => {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const btn = form.querySelector('button');
+                const origHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                const res = await window.postFormAjax(form.action, new FormData(form));
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+
+                if (res.success) {
+                    window.showAppToast(res.message || 'Estado del pedido actualizado.', 'success');
+                    const row = form.closest('.ped-row');
+                    const nuevoEstado = res.nuevoEstado || form.querySelector('select[name="estado"]').value;
+                    if (row) {
+                        row.dataset.estado = nuevoEstado;
+                        const badge = row.querySelector('.ped-badge');
+                        if (badge) {
+                            badge.className = 'ped-badge ' + nuevoEstado.toLowerCase().replace(/\s+/g, '-');
+                            let icon = '<i class="bi bi-x-lg"></i>';
+                            if (nuevoEstado === 'Pendiente') icon = '<i class="bi bi-clock"></i>';
+                            else if (nuevoEstado === 'Confirmado') icon = '<i class="bi bi-check2"></i>';
+                            else if (nuevoEstado === 'En camino') icon = '<i class="bi bi-truck"></i>';
+                            else if (nuevoEstado === 'Entregado') icon = '<i class="bi bi-check-all"></i>';
+                            badge.innerHTML = `${icon} ${nuevoEstado}`;
+                        }
+                    }
+                } else {
+                    window.showAppToast(res.message || 'Error al cambiar estado.', 'error');
+                }
+            });
+        });
+    });
+</script>

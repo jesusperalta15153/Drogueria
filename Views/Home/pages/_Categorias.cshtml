@@ -1,0 +1,482 @@
+@model IEnumerable<Drogueria.Models.Categoria>
+@{
+    ViewData["Title"] = "Categorías";
+    ViewData["ActiveNav"] = "categorias";
+    Layout = "~/Views/Shared/_Topbar.cshtml";
+
+    var lista = Model ?? Enumerable.Empty<Drogueria.Models.Categoria>();
+    int totalActivas = lista.Count(c => c.Estado);
+}
+
+@* ================= ALERTAS TempData ================= *@
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="background: var(--success-soft); color: var(--success); border-radius: 12px;">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>¡Éxito!</strong> @TempData["Exito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="background: var(--danger-soft); color: var(--danger); border-radius: 12px;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Atención:</strong> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+
+@* ================= SECCIÓN HERO ================= *@
+<section class="hero">
+    <div class="hero-text">
+        <span class="eyebrow" id="heroDate">
+            <i class="bi bi-calendar3 me-1"></i> Panel de Categorías
+        </span>
+        <h1 class="hero-title">Gestión de <span class="accent">Categorías</span></h1>
+        <p class="hero-sub">
+            Crear y administrar categorías para la gestión de productos.
+            Actualmente hay <strong>@totalActivas categorías activas</strong> en el sistema.
+        </p>
+    </div>
+    <div class="hero-action">
+        <button class="btn btn--primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nueva categoría
+        </button>
+    </div>
+</section>
+
+@* ================= TABLA PRINCIPAL ================= *@
+<div class="card">
+    <div class="card-head">
+        <div class="card-title-wrap">
+            <span class="eyebrow">Directorio</span>
+            <h2 class="card-title">Listado de Categorías Registradas</h2>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="ui-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input type="text" id="filtroCategorias" placeholder="Buscar por nombre..." autocomplete="off" maxlength="100" />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-scroll">
+        <table class="table table-adminator" id="tablaCategorias">
+            <thead>
+                <tr>
+                    <th>Categoría</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th>Fecha Creación</th>
+                    <th style="text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (lista.Any())
+                {
+                    @foreach (var cat in lista)
+                    {
+                        <tr class="fila-categoria">
+                            <td>
+                                <div class="cell-name">@cat.Nombre</div>
+                            </td>
+                            <td>
+                                <span style="color: var(--t-muted); font-size: 13px;">@(cat.Descripcion ?? "—")</span>
+                            </td>
+                            <td>
+                                @if (cat.Estado)
+                                {
+                                    <span class="tag t-active"><span class="tag-dot"></span> Activa</span>
+                                }
+                                else
+                                {
+                                    <span class="tag t-unavail"><span class="tag-dot"></span> Inactiva</span>
+                                }
+                            </td>
+                            <td>
+                                <span style="color: var(--t-muted); font-size: 13px;">@cat.FechaCreacion.ToString("dd/MM/yyyy")</span>
+                            </td>
+                            <td style="text-align: right;">
+                                <!-- Acciones Desktop -->
+                                <div class="d-none d-md-inline-flex align-items-center gap-1">
+                                    <!-- Botón Editar -->
+                                    <button class="btn-action-icon edit"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalEditar"
+                                            data-id="@cat.Id"
+                                            data-nombre="@cat.Nombre"
+                                            data-descripcion="@(cat.Descripcion ?? "")"
+                                            data-estado="@cat.Estado.ToString().ToLowerInvariant()"
+                                            data-fecha="@cat.FechaCreacion.ToString("o")"
+                                            title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    <!-- Botón Desactivar -->
+                                    <form method="post" asp-controller="Categoria" asp-action="Delete" asp-route-id="@cat.Id"
+                                          class="d-inline desactivar-form" data-categoria-id="@cat.Id">
+                                        @Html.AntiForgeryToken()
+                                        <button type="button" class="btn-action-icon danger"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#glassConfirmModal"
+                                                data-id="@cat.Id"
+                                                data-nombre="@cat.Nombre"
+                                                title="Desactivar">
+                                            <i class="bi bi-person-x-fill"></i>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Acciones Móvil (Desplegable 3 puntos a la derecha) -->
+                                <div class="dropdown d-inline-block d-md-none position-relative">
+                                    <button class="btn-action-icon" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" title="Más opciones">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2 mobile-action-dropdown" style="min-width: 170px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border) !important; z-index: 1060;">
+                                        <li>
+                                            <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2 edit"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalEditar"
+                                                    data-id="@cat.Id"
+                                                    data-nombre="@cat.Nombre"
+                                                    data-descripcion="@(cat.Descripcion ?? "")"
+                                                    data-estado="@cat.Estado.ToString().ToLowerInvariant()"
+                                                    data-fecha="@cat.FechaCreacion.ToString("o")"
+                                                    style="color: var(--t-base); font-size: 13.5px;">
+                                                <i class="bi bi-pencil-square text-primary"></i>
+                                                <span>Editar</span>
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider my-1" style="border-color: var(--border-soft);"></li>
+                                        <li>
+                                            <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#glassConfirmModal"
+                                                    data-id="@cat.Id"
+                                                    data-nombre="@cat.Nombre"
+                                                    style="font-size: 13.5px;">
+                                                <i class="bi bi-person-x-fill text-danger"></i>
+                                                <span>Desactivar</span>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center justify-content-center text-muted">
+                                <i class="bi bi-tags" style="font-size: 42px; opacity: 0.4; margin-bottom: 12px;"></i>
+                                <span class="fw-semibold">No se encontraron categorías en la base de datos</span>
+                                <small class="text-muted mb-3">Comienza agregando la primera categoría de tu droguería.</small>
+                                <button class="btn btn--primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                                    <i class="bi bi-plus-lg me-1"></i> Registrar Primera Categoría
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@* ── Modal Crear ────────────────────────────────────── *@
+<div class="modal fade" id="modalCrear" tabindex="-1" aria-labelledby="modalCrearLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-glass">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow" style="font-size: 10px;">Nuevo Registro</span>
+                    <h5 class="modal-title" id="modalCrearLabel">Crear Nueva Categoría</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form method="post" asp-controller="Categoria" asp-action="Create">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label" for="crearNombre">Nombre <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="crearNombre" name="Nombre"
+                                   placeholder="Ej. Analgésicos" required maxlength="50" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="crearDescripcion">Descripción</label>
+                            <textarea class="form-control" id="crearDescripcion" name="Descripcion"
+                                      placeholder="Descripción breve (opcional)" rows="2" maxlength="255"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="crearEstado" name="Estado" value="true" checked />
+                                <label class="form-check-label small fw-semibold" for="crearEstado" style="color: var(--t-base);">
+                                    Categoría Activa
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">
+                        <i class="bi bi-tags-fill me-1"></i> Guardar Categoría
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Modal Editar ───────────────────────────────────── *@
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-glass">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow" style="font-size: 10px;">Editar Registro</span>
+                    <h5 class="modal-title" id="modalEditarLabel">Editar Categoría</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form method="post" asp-controller="Categoria" asp-action="Edit" id="formEditar">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="editarId" name="Id" />
+                <input type="hidden" id="editarFechaCreacion" name="FechaCreacion" />
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label" for="editarNombre">Nombre <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editarNombre" name="Nombre"
+                                   placeholder="Ej. Analgésicos" required maxlength="50" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" for="editarDescripcion">Descripción</label>
+                            <textarea class="form-control" id="editarDescripcion" name="Descripcion"
+                                      placeholder="Descripción breve (opcional)" rows="2" maxlength="255"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="editarEstado" name="Estado" value="true" />
+                                <label class="form-check-label small fw-semibold" for="editarEstado" style="color: var(--t-base);">
+                                    Categoría Activa
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">
+                        <i class="bi bi-pencil-fill me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Modal Confirmar Desactivar (mismo estilo que Usuarios) ── *@
+<div class="modal fade" id="glassConfirmModal" tabindex="-1" aria-labelledby="glassConfirmLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content modal-glass">
+            <div class="modal-header">
+                <h5 class="modal-title" id="glassConfirmLabel">¿Desactivar categoría?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--t-muted); font-size: 13px; margin: 0;" id="glassConfirmTexto">
+                    Esta acción desactivará la categoría seleccionada. Podrás reactivarla cuando quieras desde el listado.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnConfirmarDesactivar" class="btn btn--ghost"
+                        style="color: var(--danger); border-color: var(--danger);"
+                        onclick="confirmarDesactivarCategoria()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                    </svg>
+                    Desactivar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="~/js/landingPages.js" asp-append-version="true"></script>
+
+@section Scripts {
+    <script>
+    let idCategoriaADesactivar = null;
+
+    async function confirmarDesactivarCategoria() {
+        if (!idCategoriaADesactivar) return;
+        const form = document.querySelector(`.desactivar-form[data-categoria-id="${idCategoriaADesactivar}"]`);
+        if (!form) return;
+
+        const modalEl = document.getElementById('glassConfirmModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+
+        const res = await window.postFormAjax(form.action, new FormData(form));
+        if (res.success) {
+            if (modal) modal.hide();
+            window.showAppToast(res.message || 'Categoría desactivada.', 'success');
+            const fila = form.closest('tr');
+            if (fila) {
+                const tag = fila.querySelector('.tag');
+                if (tag) {
+                    tag.className = 'tag t-unavail';
+                    tag.innerHTML = '<span class="tag-dot"></span> Inactiva';
+                }
+                const editBtn = fila.querySelector('.btn-action-icon.edit');
+                if (editBtn) editBtn.setAttribute('data-estado', 'false');
+            }
+        } else {
+            window.showAppToast(res.message || 'No se pudo desactivar.', 'error');
+        }
+    }
+
+    function cargarFecha() {
+        const fechaEl = document.getElementById("heroDate");
+        if (!fechaEl) return;
+        const hoy = new Date();
+        const opciones = { day: "numeric", month: "long", year: "numeric" };
+        fechaEl.innerHTML = `<i class="bi bi-calendar3 me-1"></i> ` + hoy.toLocaleDateString("es-ES", opciones);
+    }
+
+    function autoOcultarAlertas() {
+        document.querySelectorAll(".alert-dismissible").forEach(function (alertEl) {
+            setTimeout(function () {
+                const instancia = bootstrap.Alert.getOrCreateInstance(alertEl);
+                instancia.close();
+            }, 4000);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        cargarFecha();
+        autoOcultarAlertas();
+
+        // Filtro en tiempo real
+        document.getElementById("filtroCategorias")?.addEventListener("input", function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll(".fila-categoria").forEach(function (fila) {
+                const nombre = fila.querySelector(".cell-name")?.textContent.toLowerCase() || "";
+                fila.style.display = nombre.includes(q) ? "" : "none";
+            });
+        });
+
+        // Modal Crear AJAX
+        const modalCrearEl = document.getElementById("modalCrear");
+        const formCrear = modalCrearEl?.querySelector("form");
+        if (formCrear) {
+            formCrear.addEventListener("submit", async function (e) {
+                e.preventDefault();
+                const res = await window.postFormAjax(formCrear.action, new FormData(formCrear));
+                if (res.success) {
+                    const modal = bootstrap.Modal.getInstance(modalCrearEl);
+                    if (modal) modal.hide();
+                    window.showAppToast(res.message || "Categoría creada con éxito.", "success");
+                    setTimeout(() => location.reload(), 700);
+                } else {
+                    window.showAppToast(res.message || "Error al crear la categoría.", "error");
+                }
+            });
+        }
+
+        // Modal Editar AJAX
+        const formEditar = document.getElementById("formEditar");
+        if (formEditar) {
+            formEditar.addEventListener("submit", async function (e) {
+                e.preventDefault();
+                const res = await window.postFormAjax(formEditar.action, new FormData(formEditar));
+                if (res.success) {
+                    const editModalEl = document.getElementById("modalEditar");
+                    const modal = bootstrap.Modal.getInstance(editModalEl);
+                    if (modal) modal.hide();
+                    window.showAppToast(res.message || "Categoría actualizada con éxito.", "success");
+
+                    const catId = document.getElementById("editarId").value;
+                    const catNombre = document.getElementById("editarNombre").value;
+                    const catDesc = document.getElementById("editarDescripcion").value;
+                    const catEstado = document.getElementById("editarEstado").checked;
+
+                    const editBtn = document.querySelector(`.btn-action-icon.edit[data-id="${catId}"]`);
+                    if (editBtn) {
+                        editBtn.setAttribute("data-nombre", catNombre);
+                        editBtn.setAttribute("data-descripcion", catDesc);
+                        editBtn.setAttribute("data-estado", catEstado ? "true" : "false");
+
+                        const fila = editBtn.closest("tr");
+                        if (fila) {
+                            const nameEl = fila.querySelector(".cell-name");
+                            if (nameEl) nameEl.textContent = catNombre;
+
+                            const descEl = fila.children[1]?.querySelector("span");
+                            if (descEl) descEl.textContent = catDesc || "—";
+
+                            const tagEl = fila.querySelector(".tag");
+                            if (tagEl) {
+                                tagEl.className = catEstado ? "tag t-active" : "tag t-unavail";
+                                tagEl.innerHTML = `<span class="tag-dot"></span> ${catEstado ? 'Activa' : 'Inactiva'}`;
+                            }
+                        }
+                    }
+                } else {
+                    window.showAppToast(res.message || "Error al actualizar la categoría.", "error");
+                }
+            });
+        }
+
+        // Modal Editar — carga datos desde data-attributes
+        const editModal = document.getElementById("modalEditar");
+        if (editModal) {
+            editModal.addEventListener("show.bs.modal", function (event) {
+                const btn = event.relatedTarget;
+                if (!btn) return;
+
+                const id     = btn.getAttribute("data-id");
+                const nombre = btn.getAttribute("data-nombre");
+                const desc   = btn.getAttribute("data-descripcion");
+                const estado = btn.getAttribute("data-estado");
+                const fecha  = btn.getAttribute("data-fecha");
+
+                document.getElementById("editarId").value = id || "";
+                document.getElementById("editarNombre").value = nombre || "";
+                document.getElementById("editarDescripcion").value = desc || "";
+                document.getElementById("editarEstado").checked = estado === "true";
+                document.getElementById("editarFechaCreacion").value = fecha || "";
+                document.getElementById("formEditar").action = `/Categoria/Edit/${id}`;
+            });
+        }
+
+        // Modal Confirmar Desactivar
+        const confirmModal = document.getElementById("glassConfirmModal");
+        if (confirmModal) {
+            confirmModal.addEventListener("show.bs.modal", function (event) {
+                const btn = event.relatedTarget;
+                idCategoriaADesactivar = btn?.getAttribute("data-id") || null;
+                const nombre = btn?.getAttribute("data-nombre") || "esta categoría";
+
+                const texto = document.getElementById("glassConfirmTexto");
+                if (texto) {
+                    texto.textContent = `Esta acción desactivará la categoría "${nombre}". Podrás reactivarla cuando quieras desde el listado.`;
+                }
+            });
+        }
+    });
+    </script>
+}

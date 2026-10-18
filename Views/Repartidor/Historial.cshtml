@@ -1,0 +1,286 @@
+@model IEnumerable<Drogueria.Models.Pedido>
+@{
+    ViewData["Title"] = "Historial de Entregas";
+    ViewData["ActiveNav"] = "historial";
+    Layout = "~/Views/Shared/_LayoutCliente.cshtml";
+    var lista = Model ?? Enumerable.Empty<Drogueria.Models.Pedido>();
+    var totalEntregas = lista.Count();
+
+    // Cálculos de ganancias reales del repartidor
+    var listaCalculos = lista.Select(p => new {
+        Pedido = p,
+        Calculo = Drogueria.Controllers.RepartidorGananciasHelper.Calcular(p)
+    }).ToList();
+
+    var totalGanancias = listaCalculos.Sum(x => x.Calculo.GananciaTotal);
+    var hoyGanancias = listaCalculos.Where(x => x.Pedido.Fecha.Date == DateTime.Today).Sum(x => x.Calculo.GananciaTotal);
+    var esteMesGanancias = listaCalculos.Where(x => x.Pedido.Fecha.Month == DateTime.Now.Month && x.Pedido.Fecha.Year == DateTime.Now.Year).Sum(x => x.Calculo.GananciaTotal);
+    var estaEnLinea = ViewBag.EstaEnLinea != null ? (bool)ViewBag.EstaEnLinea : true;
+}
+
+<style>
+.historial-wrap { padding: 28px 24px; max-width: 1200px; margin: 0 auto; }
+@@media (max-width: 576px) { .historial-wrap { padding: 16px 12px; } }
+
+.hist-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    overflow: hidden;
+    margin-bottom: 16px;
+    transition: box-shadow .2s, transform .15s;
+}
+.hist-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.10); transform: translateY(-1px); }
+[data-bs-theme="dark"] .hist-card { box-shadow: 0 2px 14px rgba(0,0,0,.35); }
+[data-bs-theme="dark"] .hist-card:hover { box-shadow: 0 6px 28px rgba(0,0,0,.5); }
+
+.hist-card-header {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex; flex-wrap: wrap;
+    align-items: center; justify-content: space-between; gap: 10px;
+    background: rgba(16,185,129,.04);
+}
+[data-bs-theme="dark"] .hist-card-header { background: rgba(16,185,129,.06); }
+.hist-card-body { padding: 18px 22px; }
+
+.hist-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; }
+@@media (max-width: 600px) { .hist-info-grid { grid-template-columns: 1fr; } }
+
+.info-row { display: flex; align-items: flex-start; gap: 9px; font-size: 13.5px; }
+.info-row > i { color: var(--primary); margin-top: 2px; flex-shrink: 0; }
+.info-row .label { font-weight: 600; color: var(--t-muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: .45px; margin-bottom: 2px; }
+.info-row .value { color: var(--t-base); font-weight: 500; }
+
+.product-list { list-style: none; padding: 0; margin: 0; }
+.product-list li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 13px; color: var(--t-base); }
+.product-list li:last-child { border-bottom: none; }
+
+.badge-entregado { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 99px; font-size: 11.5px; font-weight: 700; background: rgba(16,185,129,.14); color: #10b981; border: 1px solid rgba(16,185,129,.3); }
+[data-bs-theme="dark"] .badge-entregado { background: rgba(16,185,129,.2); color: #34d399; border-color: rgba(16,185,129,.38); }
+
+.hist-map-thumb { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); height: 190px; background: var(--bg-muted); }
+
+.historial-empty { background: var(--bg-card); border-radius: 18px; border: 1px solid var(--border); text-align: center; padding: 60px 40px; }
+</style>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<div class="historial-wrap">
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i> @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="fw-bold mb-1" style="font-size: clamp(1.4rem, 4vw, 2rem);">Historial de Entregas</h1>
+        <p class="text-muted mb-0" style="font-size:14px;">Consulta tus entregas realizadas y el detalle exacto de tus ganancias.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a asp-controller="Repartidor" asp-action="MisDomicilios" class="btn btn-outline-primary rounded-pill px-3 fw-semibold">
+            <i class="bi bi-truck me-1"></i> Ir a Domicilios Activos
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="dash-kpi-card teal p-3">
+            <span class="dash-kpi-label">Mis Ganancias Totales</span>
+            <div class="dash-kpi-val" style="font-size:1.3rem; color: #10b981;">$@totalGanancias.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="dash-kpi-card blue p-3">
+            <span class="dash-kpi-label">Ganancias Hoy</span>
+            <div class="dash-kpi-val" style="font-size:1.3rem;">$@hoyGanancias.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="dash-kpi-card purple p-3">
+            <span class="dash-kpi-label">Ganancias Este Mes</span>
+            <div class="dash-kpi-val" style="font-size:1.3rem;">$@esteMesGanancias.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="dash-kpi-card orange p-3">
+            <span class="dash-kpi-label">Total Entregas</span>
+            <div class="dash-kpi-val">@totalEntregas</div>
+        </div>
+    </div>
+</div>
+
+@if (!lista.Any())
+{
+    <div class="historial-empty">
+        <i class="bi bi-clock-history" style="font-size:3rem; opacity:.25; display:block; margin-bottom:16px;"></i>
+        <h5 class="fw-bold mb-2">Aún no tienes entregas completadas</h5>
+        <p class="text-muted small mb-4">Las entregas que marques como entregadas aparecerán aquí con su detalle de ganancias.</p>
+        <a asp-controller="Repartidor" asp-action="MisDomicilios"
+           class="btn btn-warning rounded-pill px-5 fw-semibold d-inline-flex align-items-center gap-2">
+            <i class="bi bi-truck"></i> Ver Domicilios Activos
+        </a>
+    </div>
+}
+else
+{
+    @foreach (var p in lista)
+    {
+        var shortId = p.Id.ToString().Substring(0, 8).ToUpper();
+        var clientName = p.Usuario != null ? $"{p.Usuario.Nombre} {p.Usuario.Apellido}".Trim() : "Cliente";
+        var hasCoords = p.LatitudRepartidor.HasValue && p.LongitudRepartidor.HasValue;
+        var dirRaw2 = p.DireccionEntrega ?? "";
+        var dirPartes2 = dirRaw2.Split('|');
+        var dirNombre2 = dirPartes2.Length > 0 ? dirPartes2[0].Trim() : "";
+        var dirCalle2  = dirPartes2.Length > 1 ? dirPartes2[1].Trim() : dirRaw2;
+        var dirTel2    = dirPartes2.Length > 2 ? dirPartes2[2].Trim() : "";
+        if (dirTel2.Contains("| GEO:")) dirTel2 = dirTel2.Split("| GEO:")[0].Trim();
+
+        var calc = Drogueria.Controllers.RepartidorGananciasHelper.Calcular(p);
+
+        <div class="hist-card">
+            <div class="hist-card-header">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <code class="fw-bold fs-6 text-success">#@shortId</code>
+                    <span class="badge-entregado">
+                        <i class="bi bi-check-all"></i> Entregado
+                    </span>
+                    <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle fw-semibold px-2 py-1" style="font-size:11px;">
+                        <i class="bi bi-cash-coin me-1"></i>Ganancia: $@calc.GananciaTotal.ToString("N2")
+                    </span>
+                </div>
+                <span class="text-muted" style="font-size:12px;">
+                    <i class="bi bi-calendar3 me-1"></i>@p.Fecha.ToString("dd/MM/yyyy")
+                    &nbsp;·&nbsp;<i class="bi bi-clock me-1"></i>@p.Fecha.ToString("HH:mm")
+                </span>
+            </div>
+            <div class="hist-card-body">
+                <div style="display:grid; grid-template-columns: 1fr @(hasCoords ? "250px" : ""); gap:20px; align-items:start;">
+                    <div>
+                        <div class="hist-info-grid mb-3">
+                            <div class="info-row">
+                                <i class="bi bi-person-fill"></i>
+                                <div>
+                                    <div class="label">Cliente</div>
+                                    <div class="value">@clientName</div>
+                                    <div class="text-muted" style="font-size:11.5px;">@(p.Usuario?.Email ?? "")</div>
+                                </div>
+                            </div>
+                            <div class="info-row">
+                                <i class="bi bi-geo-alt-fill" style="color:#ef4444;"></i>
+                                <div>
+                                    <div class="label">Dirección Entregada</div>
+                                    @if (string.IsNullOrEmpty(dirRaw2))
+                                    {
+                                        <div class="value text-muted fst-italic">Sin dirección registrada</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="value fw-semibold">@dirNombre2</div>
+                                        <div class="text-muted" style="font-size:11.5px;">@dirCalle2</div>
+                                        @if (!string.IsNullOrEmpty(dirTel2))
+                                        {
+                                            <div class="text-muted" style="font-size:11.5px;"><i class="bi bi-telephone me-1"></i>@dirTel2.Replace("Tel:", "").Trim()</div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="info-row mb-2">
+                            <i class="bi bi-bag-fill"></i>
+                            <div style="flex:1;">
+                                <div class="label">Productos (@p.Detalles.Count)</div>
+                                <ul class="product-list mt-1">
+                                    @foreach (var d in p.Detalles)
+                                    {
+                                        <li>
+                                            <span>@(d.Producto?.Nombre ?? "Producto") <span class="text-muted">x @d.Cantidad</span></span>
+                                            <span class="fw-bold text-success">$@d.Subtotal.ToString("N2")</span>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Panel detallado de ganancias del repartidor -->
+                        <div class="p-3 rounded-3 mt-3 mb-2" style="background: rgba(16,185,129,.07); border: 1px solid rgba(16,185,129,.25);">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                                <span class="fw-bold text-success d-inline-flex align-items-center gap-2" style="font-size:14px;">
+                                    <i class="bi bi-wallet2 fs-5"></i> Tu Ganancia por esta Entrega:
+                                </span>
+                                <span class="fs-4 fw-bold text-success">$@calc.GananciaTotal.ToString("N2")</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 pt-2 border-top" style="border-color: rgba(16,185,129,.2) !important; font-size:11.5px;">
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-truck text-primary me-1"></i> Tarifa de envío: <strong>$@calc.TarifaEnvio.ToString("N2")</strong>
+                                </span>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-heart-fill text-danger me-1"></i> Propina: <strong>$@calc.Propina.ToString("N2")</strong>
+                                </span>
+                                @if (calc.SuperaLimite)
+                                {
+                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle fw-bold" title="12% de comisión sobre la compra de $@calc.SubtotalProductos.ToString("N2") por superar el límite de $45.000">
+                                        <i class="bi bi-award-fill text-warning me-1"></i> Bono 12% (> $45.000): <strong>+$@calc.Comision12.ToString("N2")</strong>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-muted border" title="Aplica 12% cuando la compra de productos es mayor a $45.000">
+                                        <i class="bi bi-dash-circle me-1"></i> Bono 12%: $0 (&lt; $45.000)
+                                    </span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between pt-2 text-muted" style="font-size:12px;">
+                            <span>Total Facturado al Cliente:</span>
+                            <span class="fw-semibold text-secondary">$@p.Total.ToString("N2")</span>
+                        </div>
+                    </div>
+                    @if (hasCoords)
+                    {
+                        <div>
+                            <div class="info-row label mb-2"><i class="bi bi-map me-1"></i> Última ubicación GPS</div>
+                            <div class="hist-map-thumb" id="histmap-@p.Id"></div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+
+</div>
+
+@section Scripts {
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    @foreach (var p in lista.Where(p => p.LatitudRepartidor.HasValue && p.LongitudRepartidor.HasValue))
+    {
+        <text>
+    (function(){
+        var lat = @(p.LatitudRepartidor!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var lng = @(p.LongitudRepartidor!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var el = document.getElementById("histmap-@p.Id");
+        if (!el) return;
+        var map = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([lat, lng], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "(c) OpenStreetMap" }).addTo(map);
+        var icon = L.divIcon({
+            className: "",
+            html: '<div style="background:#10b981;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.3);border:2px solid #fff;"><i class=\"bi bi-truck\" style=\"font-size:14px;\"></i></div>',
+            iconSize: [32, 32], iconAnchor: [16, 16]
+        });
+        L.marker([lat, lng], { icon: icon }).addTo(map).bindPopup("Última ubicación del repartidor");
+    })();
+        </text>
+    }
+});
+</script>
+}

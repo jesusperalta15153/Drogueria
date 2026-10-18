@@ -1,0 +1,748 @@
+@model IEnumerable<Drogueria.Models.Producto>
+@{
+    ViewData["Title"] = "Productos";
+    ViewData["ActiveNav"] = "productos";
+    Layout = "~/Views/Shared/_Topbar.cshtml";
+
+    var lista = Model ?? Enumerable.Empty<Drogueria.Models.Producto>();
+    int totalActivos = lista.Count(p => p.Estado);
+}
+
+@* ================= ALERTAS TempData ================= *@
+@if (TempData["Exito"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert"
+         style="background: var(--success-soft); color: var(--success); border-radius: 12px;">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>¡Éxito!</strong> @TempData["Exito"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert"
+         style="background: var(--danger-soft); color: var(--danger); border-radius: 12px;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Atención:</strong> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+}
+
+@* ================= SECCIÓN HERO ================= *@
+<section class="hero">
+    <div class="hero-text">
+        <span class="eyebrow" id="heroDate">
+            <i class="bi bi-calendar3 me-1"></i> Panel de Productos
+        </span>
+        <h1 class="hero-title">Gestión de <span class="accent">Productos</span></h1>
+        <p class="hero-sub">
+            Crea y administra el inventario de la droguería.
+            Actualmente hay <strong>@totalActivos productos activos</strong> en el sistema.
+        </p>
+    </div>
+    <div class="hero-action">
+        <button class="btn btn--primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nuevo producto
+        </button>
+    </div>
+</section>
+
+@* ================= TABLA PRINCIPAL ================= *@
+<div class="card">
+    <div class="card-head">
+        <div class="card-title-wrap">
+            <span class="eyebrow">Inventario</span>
+            <h2 class="card-title">Listado de Productos Registrados</h2>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="ui-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input type="text" id="filtroProductos" placeholder="Buscar por nombre o categoría..." autocomplete="off" maxlength="100" />
+            </div>
+        </div>
+    </div>
+
+    <div class="table-scroll">
+        <table class="table table-adminator" id="tablaProductos">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Existencia</th>
+                    <th>Estado</th>
+                    <th style="text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (lista.Any())
+                {
+                    @foreach (var p in lista)
+                    {
+                        <tr class="fila-producto">
+                            <!-- Imagen + Nombre -->
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    @if (!string.IsNullOrEmpty(p.Imagen))
+                                    {
+                                        <img src="/@p.Imagen" alt="@p.Nombre"
+                                             style="width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--border);" />
+                                    }
+                                    else
+                                    {
+                                        <div style="width:40px;height:40px;border-radius:8px;background:var(--surface-2);
+                                                    display:flex;align-items:center;justify-content:center;
+                                                    border:1px solid var(--border);">
+                                            <i class="bi bi-box-seam" style="color:var(--t-muted);font-size:18px;"></i>
+                                        </div>
+                                    }
+                                    <div>
+                                        <div class="cell-name d-flex align-items-center gap-2">
+                                            @p.Nombre
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;">@p.Miligramos @(string.IsNullOrEmpty(p.UnidadMedida) ? "mg" : p.UnidadMedida)</span>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(p.Descripcion))
+                                        {
+                                            <div class="cell-email" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                @p.Descripcion
+                                            </div>
+                                        }
+                                        @if (p.LimiteMaximoPorPedido.HasValue)
+                                        {
+                                            <small class="text-muted" style="font-size: 10px;">Máx. @p.LimiteMaximoPorPedido /pedido</small>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Categoría -->
+                            <td>
+                                <span class="tag t-info">
+                                    <i class="bi bi-tags"></i> @(p.Categoria?.Nombre ?? "—")
+                                </span>
+                            </td>
+
+                            <!-- Precio -->
+                            <td>
+                                <span class="cell-name">$@p.Precio.ToString("N2")</span>
+                            </td>
+
+                            <!-- Stock -->
+                            <td>
+                                @if (p.Stock <= 0)
+                                {
+                                    <span class="tag t-unavail">Sin stock</span>
+                                }
+                                else if (p.Stock <= p.StockMinimo)
+                                {
+                                    <span class="tag t-used" title="Alerta: Stock por debajo o igual al mínimo (@p.StockMinimo)">@p.Stock uds. (Bajo)</span>
+                                }
+                                else
+                                {
+                                    <span class="tag t-active">@p.Stock uds.</span>
+                                }
+                            </td>
+
+                            <!-- Estado -->
+                            <td>
+                                @if (p.Estado)
+                                {
+                                    <span class="tag t-active"><span class="tag-dot"></span> Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="tag t-unavail"><span class="tag-dot"></span> Inactivo</span>
+                                }
+                            </td>
+
+                            <!-- Acciones -->
+                            <td style="text-align: right;">
+                                <!-- Acciones Desktop -->
+                                <div class="d-none d-md-inline-flex align-items-center gap-1">
+                                    <!-- Editar -->
+                                    <button class="btn-action-icon edit"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalEditar"
+                                            data-id="@p.Id"
+                                            data-nombre="@p.Nombre"
+                                            data-descripcion="@(p.Descripcion ?? "")"
+                                            data-miligramos="@p.Miligramos"
+                                            data-unidad-medida="@(string.IsNullOrEmpty(p.UnidadMedida) ? "mg" : p.UnidadMedida)"
+                                            data-precio="@p.Precio.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-categoria-id="@p.CategoriaId"
+                                            data-stock="@p.Stock"
+                                            data-stock-minimo="@p.StockMinimo"
+                                            data-limite-maximo="@(p.LimiteMaximoPorPedido?.ToString() ?? "")"
+                                            data-estado="@p.Estado.ToString().ToLowerInvariant()"
+                                            data-fecha="@p.FechaCreacion.ToString("o")"
+                                            data-imagen="@(p.Imagen ?? "")"
+                                            title="Editar">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    <!-- Desactivar -->
+                                    <form method="post" asp-controller="Producto" asp-action="Delete" asp-route-id="@p.Id"
+                                          class="d-inline desactivar-form" data-producto-id="@p.Id">
+                                        @Html.AntiForgeryToken()
+                                        <button type="button" class="btn-action-icon danger"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#glassConfirmModal"
+                                                data-id="@p.Id"
+                                                data-nombre="@p.Nombre"
+                                                title="Desactivar">
+                                            <i class="bi bi-person-x-fill"></i>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Acciones Móvil (Desplegable 3 puntos a la derecha) -->
+                                <div class="dropdown d-inline-block d-md-none position-relative">
+                                    <button class="btn-action-icon" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" title="Más opciones">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2 mobile-action-dropdown" style="min-width: 170px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border) !important; z-index: 1060;">
+                                        <li>
+                                            <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2 edit"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalEditar"
+                                                    data-id="@p.Id"
+                                                    data-nombre="@p.Nombre"
+                                                    data-descripcion="@(p.Descripcion ?? "")"
+                                                    data-miligramos="@p.Miligramos"
+                                                    data-unidad-medida="@(string.IsNullOrEmpty(p.UnidadMedida) ? "mg" : p.UnidadMedida)"
+                                                    data-precio="@p.Precio.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                                    data-categoria-id="@p.CategoriaId"
+                                                    data-stock="@p.Stock"
+                                                    data-stock-minimo="@p.StockMinimo"
+                                                    data-limite-maximo="@(p.LimiteMaximoPorPedido?.ToString() ?? "")"
+                                                    data-estado="@p.Estado.ToString().ToLowerInvariant()"
+                                                    data-fecha="@p.FechaCreacion.ToString("o")"
+                                                    data-imagen="@(p.Imagen ?? "")"
+                                                    style="color: var(--t-base); font-size: 13.5px;">
+                                                <i class="bi bi-pencil-square text-primary"></i>
+                                                <span>Editar</span>
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider my-1" style="border-color: var(--border-soft);"></li>
+                                        <li>
+                                            <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#glassConfirmModal"
+                                                    data-id="@p.Id"
+                                                    data-nombre="@p.Nombre"
+                                                    style="font-size: 13.5px;">
+                                                <i class="bi bi-person-x-fill text-danger"></i>
+                                                <span>Desactivar</span>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center justify-content-center text-muted">
+                                <i class="bi bi-box-seam" style="font-size: 42px; opacity: 0.4; margin-bottom: 12px;"></i>
+                                <span class="fw-semibold">No se encontraron productos en la base de datos</span>
+                                <small class="text-muted mb-3">Comienza agregando el primer producto de tu droguería.</small>
+                                <button class="btn btn--primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                                    <i class="bi bi-plus-lg me-1"></i> Registrar Primer Producto
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@* ── Modal Crear ─────────────────────────────────────────── *@
+<div class="modal fade" id="modalCrear" tabindex="-1" aria-labelledby="modalCrearLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-glass">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow" style="font-size: 10px;">Nuevo Registro</span>
+                    <h5 class="modal-title" id="modalCrearLabel">Crear Nuevo Producto</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form method="post" asp-controller="Producto" asp-action="Create" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Nombre -->
+                        <div class="col-sm-8">
+                            <label class="form-label" for="crearNombre">Nombre <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="crearNombre" name="Nombre"
+                                   placeholder="Ej. Ibuprofeno" required maxlength="150" />
+                        </div>
+
+                        <!-- Dosis / Concentración y Unidad -->
+                        <div class="col-sm-4">
+                            <label class="form-label" for="crearMiligramos">Dosis / Concentración <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="crearMiligramos" name="Miligramos"
+                                       placeholder="Ej. 500" min="1" max="10000" required />
+                                <select class="form-select" id="crearUnidadMedida" name="UnidadMedida" style="max-width: 105px;" required>
+                                    <option value="mg">mg</option>
+                                    <option value="ml">ml</option>
+                                    <option value="g">g</option>
+                                    <option value="mcg">mcg</option>
+                                    <option value="UI">UI</option>
+                                    <option value="amp">amp</option>                           
+                                    <option value="ud">ud</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Categoría -->
+                        <div class="col-sm-6">
+                            <label class="form-label" for="crearCategoria">Categoría <span class="text-danger">*</span></label>
+                            <select class="form-select" id="crearCategoria" name="CategoriaId" required>
+                                <option value="">— Seleccionar —</option>
+                                @foreach (SelectListItem item in (IEnumerable<SelectListItem>)ViewBag.Categorias)
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Precio -->
+                        <div class="col-sm-6">
+                            <label class="form-label" for="crearPrecio">Precio <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="crearPrecio" name="Precio"
+                                       placeholder="0.00" min="0.01" max="500000" step="0.01" required />
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="col-12">
+                            <label class="form-label" for="crearDescripcion">Descripción Detallada</label>
+                            <textarea class="form-control" id="crearDescripcion" name="Descripcion"
+                                      placeholder="Descripción completa del medicamento o producto (indicaciones, posología, contraindicaciones, etc.)..." rows="4" maxlength="2000" style="resize: vertical;"></textarea>
+                            <div class="form-text text-muted small">Máximo 2,000 caracteres.</div>
+                        </div>
+
+                        <!-- Stock Actual -->
+                        <div class="col-sm-4">
+                            <label class="form-label" for="crearStock">Existencia <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="crearStock" name="Stock"
+                                   placeholder="0" min="0" max="50000" value="0" required />
+                        </div>
+
+                        <!-- Stock Mínimo (Límite Alerta) -->
+                        <div class="col-sm-4">
+                            <label class="form-label" for="crearStockMinimo">Límite Stock Alerta <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="crearStockMinimo" name="StockMinimo"
+                                   placeholder="5" min="0" max="5000" value="5" required title="Notifica stock bajo si el inventario llega a esta cantidad" />
+                        </div>
+
+                        <!-- Límite Máximo Por Pedido -->
+                        <div class="col-sm-4">
+                            <label class="form-label" for="crearLimiteMaximo">Máx. pastillas/ud. por pedido</label>
+                            <input type="number" class="form-control" id="crearLimiteMaximo" name="LimiteMaximoPorPedido"
+                                   placeholder="Sin límite" min="1" max="100" title="Restringe el máximo de unidades que un cliente puede pedir (Máx 100)" />
+                        </div>
+
+                        <!-- Imagen -->
+                        <div class="col-12">
+                            <label class="form-label" for="crearImagen">Imagen del Producto</label>
+                            <input type="file" class="form-control" id="crearImagen" name="imagenFile"
+                                   accept=".jpg,.jpeg,.png,.webp,.gif" />
+                            <small class="text-muted">JPG, PNG, WEBP (opcional)</small>
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="col-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="crearEstado" name="Estado" value="true" checked />
+                                <label class="form-check-label small fw-semibold" for="crearEstado" style="color: var(--t-base);">
+                                    Producto Activo (visible en el sistema)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">
+                        <i class="bi bi-box-seam me-1"></i> Guardar Producto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Modal Editar ────────────────────────────────────────── *@
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-glass">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow" style="font-size: 10px;">Editar Registro</span>
+                    <h5 class="modal-title" id="modalEditarLabel">Editar Producto</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form method="post" asp-controller="Producto" asp-action="Edit" id="formEditar" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="editarId" name="Id" />
+                <input type="hidden" id="editarFecha" name="FechaCreacion" />
+                <input type="hidden" id="editarImagenActual" name="Imagen" />
+
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Nombre -->
+                        <div class="col-sm-8">
+                            <label class="form-label" for="editarNombre">Nombre <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="editarNombre" name="Nombre"
+                                   placeholder="Ej. Ibuprofeno" required maxlength="150" />
+                        </div>
+
+                        <!-- Dosis / Concentración y Unidad -->
+                        <div class="col-sm-4">
+                            <label class="form-label" for="editarMiligramos">Dosis / Concentración <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="editarMiligramos" name="Miligramos"
+                                       placeholder="Ej. 500" min="1" max="10000" required />
+                                <select class="form-select" id="editarUnidadMedida" name="UnidadMedida" style="max-width: 105px;" required>
+                                    <option value="mg">mg</option>
+                                    <option value="ml">ml</option>
+                                    <option value="g">g</option>
+                                    <option value="mcg">mcg</option>
+                                    <option value="UI">UI</option>
+                                    <option value="amp">amp</option>
+                                    <option value="ud">ud</option>
+                                    <option value="caps">caps</option>
+                                    <option value="tab">tab</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Categoría -->
+                        <div class="col-sm-6">
+                            <label class="form-label" for="editarCategoria">Categoría <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editarCategoria" name="CategoriaId" required>
+                                <option value="">— Seleccionar —</option>
+                                @foreach (SelectListItem item in (IEnumerable<SelectListItem>)ViewBag.Categorias)
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Precio -->
+                        <div class="col-sm-6">
+                            <label class="form-label" for="editarPrecio">Precio <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="editarPrecio" name="Precio"
+                                       placeholder="0.00" min="0.01" max="500000" step="0.01" required />
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="col-12">
+                            <label class="form-label" for="editarDescripcion">Descripción Detallada</label>
+                            <textarea class="form-control" id="editarDescripcion" name="Descripcion"
+                                      placeholder="Descripción completa del medicamento o producto (indicaciones, posología, contraindicaciones, etc.)..." rows="4" maxlength="2000" style="resize: vertical;"></textarea>
+                            <div class="form-text text-muted small">Máximo 2,000 caracteres.</div>
+                        </div>
+
+                        <!-- Stock Actual -->
+                        <div class="col-sm-4">
+                            <label class="form-label" for="editarStock">Existencia <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="editarStock" name="Stock"
+                                   placeholder="0" min="0" max="50000" required />
+                        </div>
+
+                        <!-- Stock Mínimo (Límite Alerta) -->
+                        <div class="col-sm-4">
+                            <label class="form-label" for="editarStockMinimo">Límite Alerta <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="editarStockMinimo" name="StockMinimo"
+                                   placeholder="5" min="0" max="5000" required />
+                        </div>
+
+                        <!-- Límite Máximo Por Pedido -->
+                        <div class="col-sm-4">
+                            <label class="form-label" for="editarLimiteMaximo">Máx. pastillas/ud. por pedido</label>
+                            <input type="number" class="form-control" id="editarLimiteMaximo" name="LimiteMaximoPorPedido"
+                                   placeholder="Sin límite" min="1" max="100" />
+                        </div>
+
+                        <!-- Imagen -->
+                        <div class="col-12">
+                            <label class="form-label">Imagen actual</label>
+                            <div id="editarImagenPreview" class="mb-2"></div>
+                            <input type="file" class="form-control" id="editarImagenFile" name="imagenFile"
+                                   accept=".jpg,.jpeg,.png,.webp,.gif" />
+                            <small class="text-muted">Dejar vacío para conservar la imagen actual</small>
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="col-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="editarEstado" name="Estado" value="true" />
+                                <label class="form-check-label small fw-semibold" for="editarEstado" style="color: var(--t-base);">
+                                    Producto Activo (visible en el sistema)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn--primary">
+                        <i class="bi bi-pencil-fill me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Modal Confirmar Desactivar ──────────────────────────── *@
+<div class="modal fade" id="glassConfirmModal" tabindex="-1" aria-labelledby="glassConfirmLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content modal-glass">
+            <div class="modal-header">
+                <h5 class="modal-title" id="glassConfirmLabel">¿Desactivar producto?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--t-muted); font-size: 13px; margin: 0;" id="glassConfirmTexto">
+                    Esta acción desactivará el producto seleccionado. Podrás reactivarlo cuando quieras desde el listado.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnConfirmarDesactivar" class="btn btn--ghost"
+                        style="color: var(--danger); border-color: var(--danger);"
+                        onclick="confirmarDesactivarProducto()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                    </svg>
+                    Desactivar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="~/js/landingPages.js" asp-append-version="true"></script>
+
+@section Scripts {
+    <script>
+    let idProductoADesactivar = null;
+
+    async function confirmarDesactivarProducto() {
+        if (!idProductoADesactivar) return;
+        const form = document.querySelector(`.desactivar-form[data-producto-id="${idProductoADesactivar}"]`);
+        if (!form) return;
+
+        const btnConfirm = document.getElementById("btnConfirmarDesactivar");
+        if (btnConfirm) btnConfirm.disabled = true;
+
+        const formData = new FormData(form);
+        const res = await window.postFormAjax(form.action, formData);
+
+        if (btnConfirm) btnConfirm.disabled = false;
+
+        const modalEl = document.getElementById("glassConfirmModal");
+        if (modalEl) {
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+
+        if (res.success) {
+            window.showAppToast(res.message, "success");
+            const tr = form.closest("tr");
+            if (tr) {
+                const tdEstado = tr.querySelector("td:nth-child(5)");
+                if (tdEstado) {
+                    tdEstado.innerHTML = '<span class="tag t-unavail"><span class="tag-dot"></span> Inactivo</span>';
+                }
+                const btnEdit = tr.querySelector(".btn-action-icon.edit");
+                if (btnEdit) btnEdit.setAttribute("data-estado", "false");
+            }
+        } else {
+            window.showAppToast(res.message || "Error al desactivar el producto.", "error");
+        }
+    }
+
+    function cargarFecha() {
+        const fechaEl = document.getElementById("heroDate");
+        if (!fechaEl) return;
+        const hoy = new Date();
+        const opciones = { day: "numeric", month: "long", year: "numeric" };
+        fechaEl.innerHTML = `<i class="bi bi-calendar3 me-1"></i> ` + hoy.toLocaleDateString("es-ES", opciones);
+    }
+
+    function autoOcultarAlertas() {
+        document.querySelectorAll(".alert-dismissible").forEach(function (alertEl) {
+            setTimeout(function () {
+                const instancia = bootstrap.Alert.getOrCreateInstance(alertEl);
+                instancia.close();
+            }, 4000);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        cargarFecha();
+        autoOcultarAlertas();
+
+        // Filtro en tiempo real
+        document.getElementById("filtroProductos")?.addEventListener("input", function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll(".fila-producto").forEach(function (fila) {
+                const texto = fila.textContent.toLowerCase();
+                fila.style.display = texto.includes(q) ? "" : "none";
+            });
+        });
+
+        // Crear Producto vía AJAX
+        const formCrear = document.querySelector("#modalCrear form");
+        if (formCrear) {
+            formCrear.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                const btnSubmit = formCrear.querySelector("button[type='submit']");
+                if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...'; }
+
+                const formData = new FormData(formCrear);
+                const res = await window.postFormAjax(formCrear.action || "/Producto/Create", formData);
+
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = '<span>Guardar Producto</span><i class="bi bi-arrow-right ms-2"></i>'; }
+
+                if (res.success) {
+                    window.showAppToast(res.message, "success");
+                    formCrear.reset();
+                    const modalEl = document.getElementById("modalCrear");
+                    if (modalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    window.showAppToast(res.message || "Error al crear producto", "error");
+                }
+            });
+        }
+
+        // Editar Producto vía AJAX
+        const formEditar = document.getElementById("formEditar");
+        if (formEditar) {
+            formEditar.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                const btnSubmit = formEditar.querySelector("button[type='submit']");
+                if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...'; }
+
+                const formData = new FormData(formEditar);
+                const res = await window.postFormAjax(formEditar.action, formData);
+
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = '<span>Guardar Cambios</span><i class="bi bi-check-lg ms-2"></i>'; }
+
+                if (res.success) {
+                    window.showAppToast(res.message, "success");
+                    const modalEl = document.getElementById("modalEditar");
+                    if (modalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    window.showAppToast(res.message || "Error al actualizar producto", "error");
+                }
+            });
+        }
+
+        // Modal Editar — carga datos desde data-attributes
+        const editModal = document.getElementById("modalEditar");
+        if (editModal) {
+            editModal.addEventListener("show.bs.modal", function (event) {
+                const btn = event.relatedTarget;
+                if (!btn) return;
+
+                const id          = btn.getAttribute("data-id");
+                const nombre      = btn.getAttribute("data-nombre");
+                const desc        = btn.getAttribute("data-descripcion");
+                const miligramos  = btn.getAttribute("data-miligramos");
+                const unidadMedida= btn.getAttribute("data-unidad-medida") || "mg";
+                const precio      = btn.getAttribute("data-precio");
+                const categoriaId = btn.getAttribute("data-categoria-id");
+                const stock       = btn.getAttribute("data-stock");
+                const stockMinimo = btn.getAttribute("data-stock-minimo");
+                const limiteMax   = btn.getAttribute("data-limite-maximo");
+                const estado      = btn.getAttribute("data-estado");
+                const fecha       = btn.getAttribute("data-fecha");
+                const imagen      = btn.getAttribute("data-imagen");
+
+                document.getElementById("editarId").value          = id || "";
+                document.getElementById("editarNombre").value      = nombre || "";
+                document.getElementById("editarDescripcion").value = desc || "";
+                document.getElementById("editarMiligramos").value  = miligramos || "";
+                
+                const selectUnidad = document.getElementById("editarUnidadMedida");
+                if (selectUnidad) {
+                    selectUnidad.value = unidadMedida;
+                    if (!selectUnidad.value) selectUnidad.value = "mg";
+                }
+
+                document.getElementById("editarPrecio").value      = precio || "";
+                document.getElementById("editarStock").value       = stock || "0";
+                document.getElementById("editarStockMinimo").value = stockMinimo || "5";
+                document.getElementById("editarLimiteMaximo").value= limiteMax || "";
+                document.getElementById("editarEstado").checked    = estado === "true";
+                document.getElementById("editarFecha").value       = fecha || "";
+                document.getElementById("editarImagenActual").value= imagen || "";
+                document.getElementById("formEditar").action       = `/Producto/Edit/${id}`;
+
+                // Seleccionar categoría
+                const selectCat = document.getElementById("editarCategoria");
+                if (selectCat) selectCat.value = categoriaId || "";
+
+                // Preview imagen actual
+                const preview = document.getElementById("editarImagenPreview");
+                if (preview) {
+                    preview.innerHTML = imagen
+                        ? `<img src="/${imagen}" alt="Imagen actual"
+                               style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--border);" />`
+                        : `<span style="color:var(--t-muted);font-size:12px;">Sin imagen</span>`;
+                }
+            });
+        }
+
+        // Modal Confirmar Desactivar
+        const confirmModal = document.getElementById("glassConfirmModal");
+        if (confirmModal) {
+            confirmModal.addEventListener("show.bs.modal", function (event) {
+                const btn = event.relatedTarget;
+                idProductoADesactivar = btn?.getAttribute("data-id") || null;
+                const nombre = btn?.getAttribute("data-nombre") || "este producto";
+
+                const texto = document.getElementById("glassConfirmTexto");
+                if (texto) {
+                    texto.textContent = `Esta acción desactivará el producto "${nombre}". Podrás reactivarlo cuando quieras desde el listado.`;
+                }
+            });
+        }
+    });
+    </script>
+}

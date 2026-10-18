@@ -1,0 +1,1062 @@
+@{
+    ViewData["Title"] = "Crezcamos Juntos | Trabaja con Nosotros";
+    ViewData["ActiveNav"] = "trabaja";
+    Layout = (User.Identity?.IsAuthenticated == true && User.IsInRole("Cliente"))
+        ? "/Views/Shared/_LayoutCliente.cshtml"
+        : "/Views/Shared/_LayoutPublico.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+<link rel="stylesheet" href="~/css/trabaja.css" asp-append-version="true" />
+
+<div class="pagina-trabaja">
+    <div class="trabaja-main-wrapper">
+
+        <!-- Barra de Navegación y Estado -->
+        <div class="trabaja-nav-bar">
+            @if (User.Identity?.IsAuthenticated == true && User.IsInRole("Cliente"))
+            {
+                <a asp-controller="Tienda" asp-action="Catalogo" class="btn-volver-portal">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Volver a la Tienda</span>
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Home" asp-action="Index" class="btn-volver-portal">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Volver al Inicio</span>
+                </a>
+            }
+
+            <div class="trabaja-live-badge">
+                <span class="trabaja-pulse-dot"></span>
+                <span>Convocatoria de Talento Abierta</span>
+            </div>
+        </div>
+
+        <!-- HERO SECTION -->
+        <header class="trabaja-hero-card">
+            <div class="trabaja-hero-pill">
+                <i class="bi bi-stars"></i>
+                <span>Crezcamos Juntos</span>
+            </div>
+            <h1 class="trabaja-hero-title">
+                Impulsa tu carrera y <span class="text-gradient">Crezcamos Juntos</span>
+            </h1>
+            <p class="trabaja-hero-sub">
+                En FarmaVida creemos que las personas son el alma de nuestro servicio. Buscamos talento con vocación humana,
+                comprometido con la salud y el bienestar de nuestros clientes. ¡Únete a nuestro equipo de trabajo!
+            </p>
+
+            <div class="trabaja-hero-chips">
+                <div class="hero-chip">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Contrato formal y prestaciones</span>
+                </div>    
+                <div class="hero-chip">
+                    <i class="bi bi-clock-history"></i>
+                    <span>Turnos organizados y descanso</span>
+                </div>
+                <div class="hero-chip">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span>Cercanía a tu lugar de vivienda</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- PILARES / BENEFICIOS -->
+        <section class="trabaja-pilares-grid" aria-label="Beneficios de trabajar con nosotros">
+            <article class="pilar-card">
+                <div class="pilar-icon-box">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                </div>
+                <h3>Bienestar Integral</h3>
+                <p>Priorizamos la salud física y mental de nuestro equipo con espacios de integración y beneficios de salud.</p>
+            </article>
+
+            <article class="pilar-card">
+                <div class="pilar-icon-box">
+                    <i class="bi bi-mortarboard-fill"></i>
+                </div>
+                <h3>Formación Continua</h3>
+                <p>Capacitación permanente en farmacología, atención al cliente y herramientas de gestión digital.</p>
+            </article>
+
+            <article class="pilar-card">
+                <div class="pilar-icon-box">
+                    <i class="bi bi-trophy-fill"></i>
+                </div>
+                <h3>Reconocimiento al Mérito</h3>
+                <p>Incentivos por desempeño, puntualidad y excelencia en el servicio a la comunidad.</p>
+            </article>
+
+            <article class="pilar-card">
+                <div class="pilar-icon-box">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <h3>Gran Clima Laboral</h3>
+                <p>Cultura de respeto, comunicación transparente y trabajo en equipo solidario en cada una de nuestras sedes.</p>
+            </article>
+        </section>
+
+        <!-- SELECTOR DE ROL / CARGO -->
+        <section class="trabaja-selector-seccion" id="postulacion">
+            <div class="selector-header">
+                <h2>¿En qué área deseas Trabajar?</h2>
+                <p>Selecciona tu perfil de interés para personalizar el formulario de postulación</p>
+            </div>
+
+            <div class="roles-grid" role="tablist">
+                <!-- Tarjeta Empleado -->
+                <button type="button" class="role-tab-btn activo" id="tabRolEmpleado" onclick="cambiarRol('empleado')" role="tab" aria-selected="true" aria-controls="formSeccionEmpleado">
+                    <div class="role-tab-icon">
+                        <i class="bi bi-hospital"></i>
+                    </div>
+                    <div class="role-tab-info">
+                        <span class="role-tab-badge">Puntos de Venta & Farmacia</span>
+                        <h3 class="role-tab-title">Personal de Droguería</h3>
+                        <p class="role-tab-desc">Atención farmacéutica, auxiliares, regentes, cajeros, ventas y gestión de bodega.</p>
+                    </div>
+                    <div class="role-tab-check">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                </button>
+
+                <!-- Tarjeta Repartidor -->
+                <button type="button" class="role-tab-btn" id="tabRolRepartidor" onclick="cambiarRol('repartidor')" role="tab" aria-selected="false" aria-controls="formSeccionRepartidor">
+                    <div class="role-tab-icon">
+                        <i class="bi bi-bicycle"></i>
+                    </div>
+                    <div class="role-tab-info">
+                        <span class="role-tab-badge badge-destacado">Ingreso Rápido</span>
+                        <h3 class="role-tab-title">Equipo de Reparto</h3>
+                        <p class="role-tab-desc">Domiciliarios motorizados o en bicicleta, rutas ágiles, horarios flexibles e ingresos atractivos.</p>
+                    </div>
+                    <div class="role-tab-check">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+        <!-- FORMULARIO PERSONAL -->
+        <main class="trabaja-form-card" id="formCard">
+
+            <form id="formEmpleado" class="formulario-rol" onsubmit="enviarPostulacion(event, 'empleado')" novalidate>
+                <div class="form-header-bar">
+                    <div class="form-title-group">
+                        <h2>Postulación: Personal de Droguería</h2>
+                        <p>Diligencia tus datos para que nuestro equipo de Gestión Humana evalúe tu perfil.</p>
+                    </div>
+                </div>
+
+                <!-- Paso 1: Datos Personales -->
+                <div class="form-step-section">
+                    <div class="form-step-title">
+                        <span class="step-num">1</span>
+                        <span>Información Personal y Contacto</span>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div>
+                            <label class="campo-label" for="empNombre">Nombre(s) <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-person input-icon"></i>
+                                <input type="text" class="form-control-pro" id="empNombre" name="Nombre" placeholder="Ej. Carlos Andrés" required maxlength="60" autocomplete="given-name">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empApellido">Apellidos <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-person input-icon"></i>
+                                <input type="text" class="form-control-pro" id="empApellido" name="Apellido" placeholder="Ej. Rodríguez Gómez" required maxlength="60" autocomplete="family-name">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empTipoDoc">Tipo de Documento <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-card-text input-icon"></i>
+                                <select class="form-control-pro" id="empTipoDoc" name="TipoDocumento" required>
+                                    <option value="C.C.">Cédula de Ciudadanía (C.C.)</option>
+                                    <option value="C.E.">Cédula de Extranjería (C.E.)</option>
+                                    <option value="P.P.T.">Permiso Protección Temporal (P.P.T.)</option>
+                                    <option value="Pasaporte">Pasaporte</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empNumeroDoc">Número de Documento <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-hash input-icon"></i>
+                                <input type="text" class="form-control-pro" id="empNumeroDoc" name="NumeroDocumento" placeholder="Ej. 1020304050" required maxlength="20">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empTelefono">Teléfono / WhatsApp <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-whatsapp input-icon"></i>
+                                <input type="tel" class="form-control-pro" id="empTelefono" name="Telefono" placeholder="Ej. 300 123 4567" required maxlength="20" autocomplete="tel">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empCorreo">Correo Electrónico <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-envelope input-icon"></i>
+                                <input type="email" class="form-control-pro" id="empCorreo" name="Correo" placeholder="ejemplo@correo.com" required maxlength="80" autocomplete="email">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empCiudad">Ciudad / Municipio <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-geo-alt input-icon"></i>
+                                <input type="text" class="form-control-pro" id="empCiudad" name="Ciudad" placeholder="Ej. Barranquilla" required maxlength="60">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empBarrio">Barrio o Localidad <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-pin-map input-icon"></i>
+                                <input type="text" class="form-control-pro" id="empBarrio" name="Barrio" placeholder="Ej. La Manga" required maxlength="60">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 2: Perfil Laboral -->
+                <div class="form-step-section">
+                    <div class="form-step-title">
+                        <span class="step-num">2</span>
+                        <span>Perfil Profesional y Cargo de Interés</span>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div>
+                            <label class="campo-label" for="empCargo">Cargo al que aspira <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-briefcase input-icon"></i>
+                                <select class="form-control-pro" id="empCargo" name="Cargo" required>
+                                    <option value="" selected disabled>Selecciona el cargo deseado</option>
+                                    <option value="Auxiliar de Droguería y Farmacia">Auxiliar de Droguería y Farmacia</option>
+                                    <option value="Regente de Farmacia">Regente de Farmacia</option>
+                                    <option value="Cajero(a) de Punto de Venta">Cajero(a) de Punto de Venta</option>
+                                    <option value="Aprendiz SENA / Prácticas">Aprendiz SENA / Etapa Práctica</option>
+                                    <option value="Otro">Otro cargo afín</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empNivelEducativo">Nivel Educativo <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-mortarboard input-icon"></i>
+                                <select class="form-control-pro" id="empNivelEducativo" name="NivelEducativo" required>
+                                    <option value="" selected disabled>Selecciona tu nivel de estudios</option>
+                                    <option value="Técnico">Técnico</option>
+                                    <option value="Tecnólogo">Tecnólogo</option>
+                                    <option value="Bachiller Académico">Bachiller Académico</option>
+                                    <option value="Profesional">Profesional</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empExperienciaAnos">Años de experiencia <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-award input-icon"></i>
+                                <select class="form-control-pro" id="empExperienciaAnos" name="ExperienciaAnos" required>
+                                    <option value="" selected disabled>Selecciona tus años de experiencia</option>
+                                    <option value="Sin experiencia previa">Sin experiencia previa</option>
+                                    <option value="Menos de 1 año">Menos de 1 año</option>
+                                    <option value="1 a 3 años">1 a 3 años</option>
+                                    <option value="Más de 3 años">Más de 3 años</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="empDisponibilidad">Disponibilidad de Horario <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-calendar-check input-icon"></i>
+                                <select class="form-control-pro" id="empDisponibilidad" name="Disponibilidad" required>
+                                    <option value="" selected disabled>Selecciona tu disponibilidad</option>
+                                    <option value="Tiempo completo">Tiempo completo</option>
+                                    <option value="Turno Mañana">Turno Mañana</option>
+                                    <option value="Turno Tarde / Noche">Turno Tarde / Noche</option>
+                                    <option value="Fines de semana y festivos">Fines de semana y festivos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-col-full">
+                            <label class="campo-label" for="empExperienciaDetalle">
+                                Perfil laboral y habilidades <span class="req">*</span>
+                            </label>
+                            <textarea class="form-control-pro no-icon" id="empExperienciaDetalle" name="ExperienciaDetalle" maxlength="500" required placeholder="Describe brevemente tu perfil laboral, conocimientos y habilidades que aportarás a nuestro equipo..." oninput="actualizarContador(this, 'contadorEmp')"></textarea>
+                            <div class="char-counter" id="contadorEmp">0 / 500 caracteres</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 3: Hoja de Vida -->
+                <div class="form-step-section">
+                    <div class="form-step-title">
+                        <span class="step-num">3</span>
+                        <span>Hoja de Vida</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div>
+                            <label class="campo-label">Adjuntar Hoja de Vida (PDF) <span class="req">*</span></label>
+                            <div class="cv-upload-dropzone" onclick="document.getElementById('empArchivoCv').click()" id="dropzoneEmp">
+                                <input type="file" id="empArchivoCv" accept=".pdf" style="display: none;" onchange="procesarArchivo(this, 'previewEmp', 'nombreArchivoEmp')">
+                                <div class="cv-icon-circle">
+                                    <i class="bi bi-cloud-arrow-up-fill"></i>
+                                </div>
+                                <div class="cv-title">Haz clic o arrastra tu archivo aquí</div>
+                                <p class="cv-sub">Formato requerido: PDF (Máximo 5MB)</p>
+                            </div>
+                            <div class="cv-file-preview" id="previewEmp">
+                                <div class="cv-file-info">
+                                    <i class="bi bi-file-earmark-pdf-fill text-danger fs-5"></i>
+                                    <span id="nombreArchivoEmp">archivo.pdf</span>
+                                </div>
+                                <button type="button" class="cv-remove-btn" onclick="quitarArchivo('empArchivoCv', 'previewEmp')" title="Quitar archivo">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Consentimiento -->
+                <div class="consentimiento-box">
+                    <input type="checkbox" id="empConsentimiento" required>
+                    <label for="empConsentimiento">
+                        Autorizo de manera libre, previa y voluntaria a FarmaVida el tratamiento de mis datos personales para fines exclusivos del proceso de selección y contacto laboral, de acuerdo con la Ley 1581 de 2012 y las <a href="#contacto">políticas de privacidad</a>.
+                    </label>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="form-actions-wrapper">
+                    <button type="submit" class="btn-postulacion-whatsapp" id="btnSubmitEmp">
+                        <i class="bi bi-whatsapp"></i>
+                        <span>Enviar Postulación por WhatsApp</span>
+                    </button>
+                    <div class="form-disclaimer">
+                        <i class="bi bi-info-circle"></i>
+                        <span>Al enviar, se abrirá WhatsApp con todos tus datos organizados para una revisión inmediata por Gestión Humana.</span>
+                    </div>
+                </div>
+            </form>
+
+
+            <!-- FORMULARIO 2: REPARTIDOR / DOMICILIOS -->
+
+            <form id="formRepartidor" class="formulario-rol" style="display: none;" onsubmit="enviarPostulacion(event, 'repartidor')" novalidate>
+                <div class="form-header-bar">
+                    <div class="form-title-group">
+                        <h2>Postulación: Repartidor y Domicilios</h2>
+                        <p>Únete a nuestra flota de entregas rápidas con las mejores comisiones y apoyo en ruta.</p>
+                    </div>
+                </div>
+
+                <!-- Paso 1: Datos Personales -->
+                <div class="form-step-section">
+                    <div class="form-step-title">
+                        <span class="step-num">1</span>
+                        <span>Información Personal y Contacto</span>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div>
+                            <label class="campo-label" for="repNombre">Nombre(s) <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-person input-icon"></i>
+                                <input type="text" class="form-control-pro" id="repNombre" name="Nombre" placeholder="Ej. Javier" required maxlength="60" autocomplete="given-name">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="repApellido">Apellidos <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-person input-icon"></i>
+                                <input type="text" class="form-control-pro" id="repApellido" name="Apellido" placeholder="Ej. Mendoza Torres" required maxlength="60" autocomplete="family-name">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="repTipoDoc">Tipo de Documento <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-card-text input-icon"></i>
+                                <select class="form-control-pro" id="repTipoDoc" name="TipoDocumento" required>
+                                    <option value="" selected disabled>Selecciona tu tipo de documento</option>
+                                    <option value="C.C.">Cédula de Ciudadanía (C.C.)</option>
+                                    <option value="C.E.">Cédula de Extranjería (C.E.)</option>
+                                    <option value="P.P.T.">Permiso Protección Temporal (P.P.T.)</option>
+                                    <option value="Pasaporte">Pasaporte</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="repNumeroDoc">Número de Documento <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-hash input-icon"></i>
+                                <input type="text" class="form-control-pro" id="repNumeroDoc" name="NumeroDocumento" placeholder="Ej. 1012345678" required maxlength="20">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="repTelefono">Teléfono / WhatsApp <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-whatsapp input-icon"></i>
+                                <input type="tel" class="form-control-pro" id="repTelefono" name="Telefono" placeholder="Ej. 312 987 6543" required maxlength="20" autocomplete="tel">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="repCorreo">Correo Electrónico <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-envelope input-icon"></i>
+                                <input type="email" class="form-control-pro" id="repCorreo" name="Correo" placeholder="repartidor@correo.com" required maxlength="80" autocomplete="email">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="repCiudad">Ciudad / Municipio <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-geo-alt input-icon"></i>
+                                <input type="text" class="form-control-pro" id="repCiudad" name="Ciudad" placeholder="Ej. Bogotá D.C." required maxlength="60">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="repBarrio">Barrio o Localidad donde resides <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-pin-map input-icon"></i>
+                                <input type="text" class="form-control-pro" id="repBarrio" name="Barrio" placeholder="Ej. Suba / Kennedy" required maxlength="60">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 2: Movilidad y Vehículo -->
+                <div class="form-step-section">
+                    <div class="form-step-title">
+                        <span class="step-num">2</span>
+                        <span>Vehículo, Documentación y Disponibilidad</span>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div>
+                            <label class="campo-label" for="repVehiculo">Tipo de Vehículo disponible <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-bicycle input-icon"></i>
+                                <select class="form-control-pro" id="repVehiculo" name="Vehiculo" required onchange="cambiarTipoVehiculo(this.value)">
+                                    <option value="" selected disabled>Selecciona el vehículo</option>
+                                    <option value="Motocicleta Propia">Motocicleta Propia</option>
+                                    <option value="Bicicleta Convencional">Bicicleta Convencional</option>
+                                    <option value="Bicicleta Eléctrica">Bicicleta Eléctrica</option>
+                                    <option value="Automóvil / Furgón Pequeño">Automóvil / Furgón Pequeño</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="campoLicencia">
+                            <label class="campo-label" for="repLicencia">Categoría de Licencia de Conducción <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-card-checklist input-icon"></i>
+                                <select class="form-control-pro" id="repLicencia" name="Licencia" required disabled>
+                                    <option value="" selected disabled>Selecciona primero un tipo de vehículo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Campo para adjuntar documentos del vehículo si aplica (Moto/Carro) -->
+                        <div id="campoDocumentosVehiculo" class="form-col-full" style="display: none;">
+                            <label class="campo-label">Adjuntar Documentos del Vehículo (SOAT, Tecnicomecánica y Tarjeta de Propiedad) <span class="req">*</span></label>
+                            <div class="cv-upload-dropzone" onclick="document.getElementById('repArchivoDocs').click()" id="dropzoneDocsRep">
+                                <input type="file" id="repArchivoDocs" name="DocumentosVehiculo" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display: none;" onchange="procesarArchivo(this, 'previewDocsRep', 'nombreArchivoDocsRep')">
+                                <div class="cv-icon-circle">
+                                    <i class="bi bi-file-earmark-medical-fill"></i>
+                                </div>
+                                <div class="cv-title">Haz clic o arrastra los documentos de tu vehículo aquí</div>
+                                <p class="cv-sub">SOAT, Tecnicomecánica y Tarjeta de Propiedad en un solo archivo legible (Hasta 5MB)</p>
+                            </div>
+                            <div class="cv-file-preview" id="previewDocsRep">
+                                <div class="cv-file-info">
+                                    <i class="bi bi-file-earmark-check-fill text-success fs-5"></i>
+                                    <span id="nombreArchivoDocsRep">documentos_vehiculo.pdf</span>
+                                </div>
+                                <button type="button" class="cv-remove-btn" onclick="quitarArchivo('repArchivoDocs', 'previewDocsRep')" title="Quitar archivo">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="campo-label" for="repDisponibilidad">Disponibilidad de Horarios <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-clock input-icon"></i>
+                                <select class="form-control-pro" id="repDisponibilidad" name="Disponibilidad" required>
+                                    <option value="" selected disabled>Selecciona tu disponibilidad</option>
+                                    <option value="Tiempo Completo (Jornada continua)">Tiempo Completo (Jornada continua)</option>
+                                    <option value="Turno Mañana (8:00 AM - 4:00 PM)">Turno Mañana (8:00 AM - 4:00 PM)</option>
+                                    <option value="Turno Tarde / Noche (1:00 PM - 9:00 PM)">Turno Tarde / Noche (1:00 PM - 9:00 PM)</option>
+                                    <option value="Fines de semana y festivos">Fines de semana y festivos</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-col-full">
+                            <label class="campo-label" for="repZonas">Zonas o Localidades de preferencia para repartos <span class="req">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="bi bi-map input-icon"></i>
+                                <input type="text" class="form-control-pro" id="repZonas" name="ZonasTrabajo" placeholder="Ej. Zona Norte (Usaquén, Suba) o Zona Centro / Teusaquillo" required maxlength="120">
+                            </div>
+                        </div>
+
+                        <div class="form-col-full">
+                            <label class="campo-label" for="repExperiencia">Experiencia en domicilios o mensajería <span class="req">*</span></label>
+                            <textarea class="form-control-pro no-icon" id="repExperiencia" name="ExperienciaDetalle" maxlength="500" required placeholder="Indica si has trabajado en plataformas de delivery (Rappi, Didi, etc.), mensajerías o droguerías, tiempo de experiencia y conocimiento de la ciudad..." oninput="actualizarContador(this, 'contadorRep')"></textarea>
+                            <div class="char-counter" id="contadorRep">0 / 500 caracteres</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 3: Hoja de Vida -->
+                <div class="form-step-section">
+                    <div class="form-step-title">
+                        <span class="step-num">3</span>
+                        <span>Hoja de Vida</span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div>
+                            <label class="campo-label">Adjuntar Hoja de Vida <span class="req">*</span></label>
+                            <div class="cv-upload-dropzone" onclick="document.getElementById('repArchivoCv').click()" id="dropzoneRep">
+                                <input type="file" id="repArchivoCv" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display: none;" onchange="procesarArchivo(this, 'previewRep', 'nombreArchivoRep')">
+                                <div class="cv-icon-circle">
+                                    <i class="bi bi-cloud-arrow-up-fill"></i>
+                                </div>
+                                <div class="cv-title">Haz clic o arrastra tu archivo aquí</div>
+                                <p class="cv-sub">PDF, Word o imagen legible (Hasta 5MB)</p>
+                            </div>
+                            <div class="cv-file-preview" id="previewRep">
+                                <div class="cv-file-info">
+                                    <i class="bi bi-file-earmark-check-fill text-success fs-5"></i>
+                                    <span id="nombreArchivoRep">documento.pdf</span>
+                                </div>
+                                <button type="button" class="cv-remove-btn" onclick="quitarArchivo('repArchivoCv', 'previewRep')" title="Quitar archivo">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Consentimiento -->
+                <div class="consentimiento-box">
+                    <input type="checkbox" id="repConsentimiento" required>
+                    <label for="repConsentimiento">
+                        Autorizo a FarmaVida para verificar mis antecedentes, documentos de movilidad y gestionar mi postulación como repartidor de conformidad con la Ley 1581 de 2012 y las <a href="#contacto">políticas de datos personales</a>.
+                    </label>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="form-actions-wrapper">
+                    <button type="submit" class="btn-postulacion-whatsapp" id="btnSubmitRep">
+                        <i class="bi bi-whatsapp"></i>
+                        <span>Enviar Postulación por WhatsApp</span>
+                    </button>
+                    <div class="form-disclaimer">
+                        <i class="bi bi-info-circle"></i>
+                        <span>Al enviar, se abrirá WhatsApp con todos tus datos organizados para asignarte una entrevista de vinculación.</span>
+                    </div>
+                </div>
+            </form>
+        </main>
+
+        <!-- PROCESO DE SELECCIÓN PASO A PASO -->
+        <section class="trabaja-proceso-seccion" aria-labelledby="procesoTitulo">
+            <div class="proceso-header">
+                <span class="trabaja-hero-pill"><i class="bi bi-diagram-3-fill"></i> Transparencia y Rapidez</span>
+                <h2 id="procesoTitulo">¿Cómo es nuestro proceso de vinculación?</h2>
+                <p class="text-muted">Conoce las etapas ágiles y claras que recorrerás con nosotros</p>
+            </div>
+
+            <div class="proceso-steps-grid">
+                <div class="step-card">
+                    <div class="step-badge-circulo">1</div>
+                    <h4>Envío de Datos</h4>
+                    <p>Completa el formulario en línea y envíalo directamente por WhatsApp para priorizar tu solicitud.</p>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-badge-circulo">2</div>
+                    <h4>Contacto y Filtro</h4>
+                    <p>Nuestro equipo de Gestión Humana revisa tu perfil y te contacta en menos de 48 horas hábiles.</p>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-badge-circulo">3</div>
+                    <h4>Entrevista</h4>
+                    <p>Una conversación cercana para conocer tus motivaciones, expectativas y detallar la oferta laboral.</p>
+                </div>
+
+                <div class="step-card">
+                    <div class="step-badge-circulo">4</div>
+                    <h4>Bienvenida al Equipo</h4>
+                    <p>Firma de contrato, inducción y entrega de dotación para que comiences a crecer con nosotros.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- PREGUNTAS FRECUENTES (FAQ) -->
+        <section class="trabaja-faq-seccion" aria-labelledby="faqTitulo">
+            <div class="faq-header">
+                <h2 id="faqTitulo">Preguntas Frecuentes</h2>
+                <p class="text-muted">Resolvemos las dudas más comunes de nuestros candidatos</p>
+            </div>
+
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-accordion-header" onclick="toggleFaq(this)">
+                    <span>¿Necesito experiencia previa para postularme a las droguerías?</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+                <div class="faq-accordion-body">
+                    Para cargos como Regente o Auxiliar de Farmacia valoramos la formación técnica y la experiencia, pero también abrimos vacantes para recién egresados y practicantes SENA con gran actitud y deseo de aprender.
+                </div>
+            </div>
+
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-accordion-header" onclick="toggleFaq(this)">
+                    <span>¿Cómo se manejan los horarios y descansos para repartidores?</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+                <div class="faq-accordion-body">
+                    Ofrecemos turnos estructurados adaptables (tiempo completo o fines de semana) con zonas de descanso asignadas en las droguerías y rutas organizadas para maximizar tus ingresos y seguridad.
+                </div>
+            </div>
+
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-accordion-header" onclick="toggleFaq(this)">
+                    <span>¿Qué tipo de contrato laboral ofrecen?</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+                <div class="faq-accordion-body">
+                    Brindamos vinculación laboral formal con todas las prestaciones de ley (salud, pensión, ARL, cesantías y primas) garantizando estabilidad y tranquilidad para ti y tu familia.
+                </div>
+            </div>
+
+            <div class="faq-accordion-item">
+                <button type="button" class="faq-accordion-header" onclick="toggleFaq(this)">
+                    <span>¿Cuánto tiempo tardan en dar respuesta a mi postulación?</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+                <div class="faq-accordion-body">
+                    Al postularte mediante este formulario directo por WhatsApp, nuestro equipo recibe tu resumen al instante y generalmente te contactamos en un plazo de 24 a 48 horas hábiles.
+                </div>
+            </div>
+        </section>
+
+        <!-- BANNER DE CONTACTO TALENTO HUMANO -->
+        <aside class="trabaja-talento-banner">
+            <div class="talento-info">
+                <h3>¿Tienes dudas adicionales sobre las convocatorias?</h3>
+                <p>Escríbenos directamente o comunícate con la coordinación de Selección y Talento Humano.</p>
+            </div>
+            <div class="talento-actions">
+                <a href="https://wa.me/573135248994?text=Hola,%20tengo%20una%20consulta%20sobre%20las%20vacantes%20laborales" target="_blank" rel="noopener" class="btn-talento-direct">
+                    <i class="bi bi-whatsapp"></i>
+                    <span>Escribir por WhatsApp</span>
+                </a>
+            </div>
+        </aside>
+
+    </div>
+</div>
+
+<!-- MODAL DE CONFIRMACIÓN ELEGANTE -->
+<div class="modal fade modal-postulacion-pro" id="modalConfirmacionPostulacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-postulacion-header">
+                <div class="modal-icon-success">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <h4>¡Postulación Generada con Éxito!</h4>
+                <p class="mb-0 text-white-50">Hemos abierto WhatsApp con todos tus datos formateados</p>
+            </div>
+            <div class="modal-postulacion-body">
+                <div class="p-3 rounded-3 mb-3" style="background: var(--bg-app, #faf9fd); border: 1px solid var(--border, #e2e8f0);">
+                    <div class="d-flex align-items-center gap-2 mb-2 text-primary fw-bold">
+                        <i class="bi bi-person-check-fill fs-5"></i>
+                        <span id="modalNombreCandidato">Candidato</span>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Tu información ha sido estructurada profesionalmente. Asegúrate de presionar <strong>"Enviar"</strong> en WhatsApp para que nuestro equipo de Gestión Humana reciba tu solicitud de inmediato.
+                    </p>
+                </div>
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Entendido</button>
+                    <a id="modalBtnReabrirWa" href="#" target="_blank" rel="noopener" class="btn btn-success rounded-pill px-4 d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-whatsapp"></i> Reabrir WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast flotante para copiar -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1300;">
+    <div id="toastCopiado" class="toast align-items-center text-white bg-dark border-0 shadow-lg rounded-4" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex p-2">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="bi bi-clipboard-check-fill text-success fs-5"></i>
+                <span>¡Resumen de postulación copiado al portapapeles!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const NUMERO_WHATSAPP = "573135248994";
+        let rolSeleccionado = "empleado";
+
+        function cambiarRol(rol) {
+            rolSeleccionado = rol;
+            const tabEmp = document.getElementById("tabRolEmpleado");
+            const tabRep = document.getElementById("tabRolRepartidor");
+            const formEmp = document.getElementById("formEmpleado");
+            const formRep = document.getElementById("formRepartidor");
+
+            if (rol === "empleado") {
+                tabEmp.classList.add("activo");
+                tabEmp.setAttribute("aria-selected", "true");
+                tabRep.classList.remove("activo");
+                tabRep.setAttribute("aria-selected", "false");
+
+                formEmp.style.display = "block";
+                formRep.style.display = "none";
+            } else {
+                tabRep.classList.add("activo");
+                tabRep.setAttribute("aria-selected", "true");
+                tabEmp.classList.remove("activo");
+                tabEmp.setAttribute("aria-selected", "false");
+
+                formRep.style.display = "block";
+                formEmp.style.display = "none";
+            }
+        }
+
+        function cambiarTipoVehiculo(tipo) {
+            const selLic = document.getElementById("repLicencia");
+            const campoDocs = document.getElementById("campoDocumentosVehiculo");
+            const inputDocs = document.getElementById("repArchivoDocs");
+
+            if (!selLic) return;
+
+            selLic.innerHTML = "";
+
+            if (!tipo) {
+                selLic.disabled = true;
+                const opt = document.createElement("option");
+                opt.value = "";
+                opt.textContent = "Selecciona primero un tipo de vehículo";
+                opt.selected = true;
+                opt.disabled = true;
+                selLic.appendChild(opt);
+
+                if (campoDocs) campoDocs.style.display = "none";
+                if (inputDocs) inputDocs.value = "";
+                return;
+            }
+
+            if (tipo.includes("Bicicleta")) {
+                selLic.disabled = false;
+                const opt = document.createElement("option");
+                opt.value = "No aplica (Bicicleta)";
+                opt.textContent = "No aplica (Bicicleta / Sin motor)";
+                opt.selected = true;
+                selLic.appendChild(opt);
+
+                if (campoDocs) campoDocs.style.display = "none";
+                if (inputDocs) {
+                    quitarArchivo('repArchivoDocs', 'previewDocsRep');
+                }
+            } else if (tipo.includes("Motocicleta")) {
+                selLic.disabled = false;
+
+                const placeholder = document.createElement("option");
+                placeholder.value = "";
+                placeholder.textContent = "Selecciona tu categoría para moto";
+                placeholder.selected = true;
+                placeholder.disabled = true;
+                selLic.appendChild(placeholder);
+
+                const opcionesMoto = [
+                    { val: "A2 (Motos de cualquier cilindraje)", label: "A2 (Motos de cualquier cilindraje)" },
+                    { val: "A1 (Motos hasta 125 c.c.)", label: "A1 (Motos hasta 125 c.c.)" }
+                ];
+
+                opcionesMoto.forEach(item => {
+                    const opt = document.createElement("option");
+                    opt.value = item.val;
+                    opt.textContent = item.label;
+                    selLic.appendChild(opt);
+                });
+
+                if (campoDocs) campoDocs.style.display = "block";
+            } else { // Automóvil / Furgón
+                selLic.disabled = false;
+
+                const placeholder = document.createElement("option");
+                placeholder.value = "";
+                placeholder.textContent = "Selecciona tu categoría de vehículo";
+                placeholder.selected = true;
+                placeholder.disabled = true;
+                selLic.appendChild(placeholder);
+
+                const opcionesCarro = [
+                    { val: "B1 (Automóviles y camionetas particulares)", label: "B1 (Automóviles y camionetas particulares)" },
+                    { val: "B2 (Camiones rígidos particulares)", label: "B2 (Camiones rígidos particulares)" },
+                    { val: "C1 (Automóviles de servicio público)", label: "C1 (Automóviles de servicio público)" },
+                    { val: "C2 (Camiones y furgones de servicio público)", label: "C2 (Camiones y furgones de servicio público)" }
+                ];
+
+                opcionesCarro.forEach(item => {
+                    const opt = document.createElement("option");
+                    opt.value = item.val;
+                    opt.textContent = item.label;
+                    selLic.appendChild(opt);
+                });
+
+                if (campoDocs) campoDocs.style.display = "block";
+            }
+        }
+
+        function actualizarContador(textarea, targetId) {
+            const contador = document.getElementById(targetId);
+            if (contador) {
+                const len = textarea.value.length;
+                contador.textContent = `${len} / ${textarea.maxLength} caracteres`;
+            }
+        }
+
+        function procesarArchivo(input, previewId, nombreId) {
+            const file = input.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    alert("El archivo supera el límite de 5MB. Por favor selecciona un documento más liviano.");
+                    input.value = "";
+                    return;
+                }
+                const preview = document.getElementById(previewId);
+                const nombreEl = document.getElementById(nombreId);
+                if (preview && nombreEl) {
+                    nombreEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                    preview.style.display = "flex";
+                }
+            }
+        }
+
+        function quitarArchivo(inputId, previewId) {
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            if (input) input.value = "";
+            if (preview) preview.style.display = "none";
+        }
+
+        function construirMensajeWhatsApp(rol) {
+            const form = rol === "empleado" ? document.getElementById("formEmpleado") : document.getElementById("formRepartidor");
+            const data = new FormData(form);
+
+            const nombre = (data.get("Nombre") || "").toString().trim();
+            const apellido = (data.get("Apellido") || "").toString().trim();
+            const tipoDoc = (data.get("TipoDocumento") || "").toString().trim();
+            const numDoc = (data.get("NumeroDocumento") || "").toString().trim();
+            const tel = (data.get("Telefono") || "").toString().trim();
+            const correo = (data.get("Correo") || "").toString().trim();
+            const ciudad = (data.get("Ciudad") || "").toString().trim();
+            const barrio = (data.get("Barrio") || "").toString().trim();
+
+            let lineas = [];
+
+            if (rol === "empleado") {
+                const cargo = (data.get("Cargo") || "Auxiliar de Droguería").toString().trim();
+                const educacion = (data.get("NivelEducativo") || "No especificado").toString().trim();
+                const expAnos = (data.get("ExperienciaAnos") || "No especificada").toString().trim();
+                const disponibilidad = (data.get("Disponibilidad") || "Tiempo completo").toString().trim();
+                const expDetalle = (data.get("ExperienciaDetalle") || "").toString().trim();
+                const fileCv = document.getElementById("empArchivoCv");
+                const tieneCv = fileCv && fileCv.files && fileCv.files.length > 0;
+
+                lineas = [
+                    "👋 *HOLA, DESEO POSTULARME A FARMAVIDA*",
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                    `💼 *Cargo de interés:* ${cargo}`,
+                    `⏱️ *Disponibilidad:* ${disponibilidad}`,
+                    "",
+                    "👤 *DATOS PERSONALES*",
+                    `• *Nombre completo:* ${nombre} ${apellido}`,
+                    `• *Documento:* ${tipoDoc} ${numDoc}`,
+                    `• *Teléfono / WhatsApp:* ${tel}`,
+                    `• *Correo electrónico:* ${correo}`,
+                    `• *Ubicación:* ${ciudad} - ${barrio}`,
+                    "",
+                    "🎓 *PERFIL Y EXPERIENCIA*",
+                    `• *Nivel educativo:* ${educacion}`,
+                    `• *Años de experiencia:* ${expAnos}`,
+                    `• *Perfil y habilidades:* ${expDetalle}`,
+                    "",
+                    "📄 *HOJA DE VIDA*",
+                    tieneCv ? `• *Archivo preparado:* ${fileCv.files[0].name}` : "• *Hoja de vida:* La compartiré por este chat",
+                    "",
+                    "✅ *Autorización de datos:* Autorizo el tratamiento de mis datos personales para este proceso de selección."
+                ].filter(l => l !== null);
+            } else {
+                const vehiculo = (data.get("Vehiculo") || "No especificado").toString().trim();
+                const licencia = (data.get("Licencia") || "No especificada").toString().trim();
+                const zonas = (data.get("ZonasTrabajo") || "No especificadas").toString().trim();
+                const disponibilidad = (data.get("Disponibilidad") || "Tiempo completo").toString().trim();
+                const expDetalle = (data.get("ExperienciaDetalle") || "").toString().trim();
+                const fileCv = document.getElementById("repArchivoCv");
+                const fileDocs = document.getElementById("repArchivoDocs");
+                const tieneCv = fileCv && fileCv.files && fileCv.files.length > 0;
+                const tieneDocs = fileDocs && fileDocs.files && fileDocs.files.length > 0;
+
+                lineas = [
+                    "👋 *HOLA, DESEO POSTULARME COMO REPARTIDOR*",
+                    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                    `🛵 *Vehículo disponible:* ${vehiculo}`,
+                    `⏱️ *Disponibilidad:* ${disponibilidad}`,
+                    "",
+                    "👤 *DATOS PERSONALES*",
+                    `• *Nombre completo:* ${nombre} ${apellido}`,
+                    `• *Documento:* ${tipoDoc} ${numDoc}`,
+                    `• *Teléfono / WhatsApp:* ${tel}`,
+                    `• *Correo electrónico:* ${correo}`,
+                    `• *Ubicación:* ${ciudad} - ${barrio}`,
+                    "",
+                    "🚦 *MOVILIDAD Y COBERTURA*",
+                    `• *Licencia de conducción:* ${licencia}`,
+                    tieneDocs ? `• *Documentos del vehículo adjuntos:* ${fileDocs.files[0].name}` : `• *Documentos del vehículo:* ${vehiculo.includes("Bicicleta") ? "No aplica (Bicicleta)" : "Los compartiré por este chat"}`,
+                    `• *Zonas de preferencia:* ${zonas}`,
+                    `• *Experiencia:* ${expDetalle}`,
+                    "",
+                    "📄 *HOJA DE VIDA*",
+                    tieneCv ? `• *Hoja de vida preparada:* ${fileCv.files[0].name}` : "• *Hoja de vida:* La compartiré por este chat",
+                    "",
+                    "✅ *Autorización de datos:* Autorizo la verificación de antecedentes y datos para el ingreso a la flota."
+                ].filter(l => l !== null);
+            }
+
+            return {
+                textoPlano: lineas.join("\n"),
+                nombreCompleto: `${nombre} ${apellido}`.trim()
+            };
+        }
+
+        function enviarPostulacion(evento, rol) {
+            evento.preventDefault();
+            const form = rol === "empleado" ? document.getElementById("formEmpleado") : document.getElementById("formRepartidor");
+
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Validar Hoja de Vida obligatoria
+            if (rol === "empleado") {
+                const cvInput = document.getElementById("empArchivoCv");
+                if (!cvInput || !cvInput.files || cvInput.files.length === 0) {
+                    alert("Por favor adjunta tu Hoja de Vida en formato PDF antes de enviar tu postulación.");
+                    const drop = document.getElementById("dropzoneEmp");
+                    if (drop) {
+                        drop.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        drop.style.borderColor = "#ef4444";
+                        setTimeout(() => { drop.style.borderColor = ""; }, 3000);
+                    }
+                    return;
+                }
+            } else {
+                const vehiculo = (document.getElementById("repVehiculo")?.value || "").toString();
+                // Si es moto o auto, validar documentos del vehículo
+                if (vehiculo.includes("Motocicleta") || vehiculo.includes("Automóvil") || vehiculo.includes("Furgón")) {
+                    const docsInput = document.getElementById("repArchivoDocs");
+                    if (!docsInput || !docsInput.files || docsInput.files.length === 0) {
+                        alert("Por favor adjunta los documentos vigentes de tu vehículo (SOAT, Tecnicomecánica y Tarjeta de Propiedad).");
+                        const dropDocs = document.getElementById("dropzoneDocsRep");
+                        if (dropDocs) {
+                            dropDocs.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            dropDocs.style.borderColor = "#ef4444";
+                            setTimeout(() => { dropDocs.style.borderColor = ""; }, 3000);
+                        }
+                        return;
+                    }
+                }
+
+                const cvInput = document.getElementById("repArchivoCv");
+                if (!cvInput || !cvInput.files || cvInput.files.length === 0) {
+                    alert("Por favor adjunta tu Hoja de Vida antes de enviar tu postulación.");
+                    const drop = document.getElementById("dropzoneRep");
+                    if (drop) {
+                        drop.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        drop.style.borderColor = "#ef4444";
+                        setTimeout(() => { drop.style.borderColor = ""; }, 3000);
+                    }
+                    return;
+                }
+            }
+
+            const { textoPlano, nombreCompleto } = construirMensajeWhatsApp(rol);
+            const urlWhatsApp = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(textoPlano)}`;
+
+            // Actualizar modal
+            const nombreEl = document.getElementById("modalNombreCandidato");
+            const btnReabrir = document.getElementById("modalBtnReabrirWa");
+            if (nombreEl) nombreEl.textContent = nombreCompleto || "Candidato";
+            if (btnReabrir) btnReabrir.href = urlWhatsApp;
+
+            // Abrir WhatsApp: en móviles usa redirección directa a la app nativa; en PC abre nueva pestaña
+            const esMovil = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (esMovil) {
+                window.location.href = urlWhatsApp;
+            } else {
+                window.open(urlWhatsApp, "_blank");
+            }
+
+            // Mostrar modal de confirmación
+            const modalEl = document.getElementById("modalConfirmacionPostulacion");
+            if (modalEl && typeof bootstrap !== "undefined") {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
+
+        function toggleFaq(btn) {
+            const item = btn.closest(".faq-accordion-item");
+            if (item) {
+                const isOpen = item.classList.contains("open");
+                document.querySelectorAll(".faq-accordion-item").forEach(el => el.classList.remove("open"));
+                if (!isOpen) {
+                    item.classList.add("open");
+                }
+            }
+        }
+    </script>
+}

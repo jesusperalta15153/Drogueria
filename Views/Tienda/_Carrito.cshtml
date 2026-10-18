@@ -1,0 +1,1401 @@
+@model List<Drogueria.Models.CarritoItem>
+<style>
+/* Permitir que el modal no corte el dropdown */
+#modalDireccion .modal-body { overflow: visible !important; }
+#modalDireccion .modal-content { overflow: visible !important; }
+#modalDireccion .modal-dialog { overflow: visible !important; }
+
+.custom-select-wrap { position: relative; }
+.custom-dropdown {
+    position: absolute; bottom: 100%; top: auto; left: 0; right: 0;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 10px 10px 0 0;
+    max-height: 210px; overflow-y: auto; z-index: 9999;
+    display: none; box-shadow: 0 -8px 24px rgba(0,0,0,.18);
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.custom-dropdown.visible { display: block; }
+.custom-dropdown-item {
+    padding: 9px 14px; font-size: 13px; cursor: pointer;
+    color: var(--t-base); transition: background .12s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.custom-dropdown-item:hover,
+.custom-dropdown-item.active { background: var(--primary-soft); color: var(--primary); }
+.custom-dropdown-empty { padding: 10px 14px; font-size: 13px; color: var(--t-muted); font-style: italic; }
+</style>
+
+@{
+    Layout = "~/Views/Shared/_LayoutCliente.cshtml";
+    ViewData["Title"] = "Mi Carrito";
+    ViewData["ActiveNav"] = "carrito";
+    var total = Model.Sum(i => i.Subtotal);
+    var dirsList = ViewBag.Direcciones as List<Drogueria.Models.DireccionUsuario> ?? new List<Drogueria.Models.DireccionUsuario>();
+    var dirPredeterminada = dirsList.FirstOrDefault(d => d.EsPredeterminada);
+}
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+    .direccion-card {
+        border: 2px solid var(--border, #dee2e6);
+        border-radius: 12px;
+        padding: 14px;
+        cursor: pointer;
+        background: var(--bg-card, #fff);
+        transition: all 0.2s ease;
+        height: 100%;
+    }
+    .direccion-card:hover { border-color: var(--primary, #0d6efd); }
+    .direccion-card.selected {
+        border-color: var(--primary, #0d6efd);
+        background: var(--primary-soft, #e8f0fe);
+    }
+    #listaDirecciones .col-md-6,
+    #listaDirecciones .col-lg-4 {
+        display: flex;
+    }
+    #listaDirecciones .col-md-6 > div,
+    #listaDirecciones .col-lg-4 > div {
+        width: 100%;
+    }
+</style>
+
+<div class="container-fluid px-3 px-lg-5">
+
+    <!-- Encabezado de Página -->
+    <div class="tienda-page-header">
+        <div>
+            <h1>
+                <i class="bi bi-cart3 text-primary"></i>
+                <span>Mi Carrito de Compras</span>
+            </h1>
+            <p class="text-muted small mb-0">Revisa los medicamentos seleccionados antes de completar tu pedido</p>
+        </div>
+
+        <a asp-controller="Tienda" asp-action="Catalogo" class="tienda-back-btn">
+            <i class="bi bi-arrow-left"></i>
+            <span>Continuar Comprando</span>
+        </a>
+    </div>
+
+    <!-- Alertas Flash -->
+    @if (TempData["Exito"] != null || TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm rounded-3" role="alert">
+            <i class="bi bi-check-circle-fill fs-5"></i>
+            <div>@(TempData["Exito"] ?? TempData["Success"])</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm rounded-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>@TempData["Error"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="tienda-empty">
+            <i class="bi bi-cart-x"></i>
+            <h3>Tu carrito está vacío</h3>
+            <p>Aún no has agregado ningún producto. Explora nuestro catálogo y añade lo que necesites.</p>
+            <a asp-controller="Tienda" asp-action="Catalogo" class="tienda-empty-btn">
+                <i class="bi bi-arrow-left"></i>
+                <span>Ir al Catálogo</span>
+            </a>
+        </div>
+    }
+    else
+    {
+        <!-- ═══════════════════════════════════════════════════════
+             SECCIÓN DIRECCIÓN DE ENTREGA (ancho completo, encima)
+        ═══════════════════════════════════════════════════════ -->
+        <div class="mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-geo-alt-fill text-danger me-2"></i>Dirección de Entrega
+                </h5>
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill"
+                        onclick="abrirModalDireccion()">
+                    <i class="bi bi-plus-lg me-1"></i> Nueva Dirección
+                </button>
+            </div>
+
+            <!-- Tarjetas de direcciones guardadas -->
+            <div id="listaDirecciones" class="row g-2 mb-2">
+                @if (dirsList.Any())
+                {
+                    foreach (var dir in dirsList)
+                    {
+                        <div class="col-md-6 col-lg-4">
+                            <div class="direccion-card @(dir.EsPredeterminada ? "selected" : "")"
+                                 data-id="@dir.Id"
+                                 onclick="seleccionarDireccion(this)">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <span class="fw-bold small">@dir.NombreContacto</span>
+                                    @if (dir.EsPredeterminada)
+                                    {
+                                        <span class="badge bg-primary-subtle text-primary" style="font-size:10px;">Predeterminada</span>
+                                    }
+                                </div>
+                                <p class="mb-1 text-muted" style="font-size:12px;">@dir.Direccion</p>
+                                <p class="mb-1 text-muted" style="font-size:12px;">@dir.Ciudad, @dir.Departamento</p>
+                                <p class="mb-2 text-muted" style="font-size:12px;">
+                                    <i class="bi bi-telephone me-1"></i>@dir.Telefono
+                                </p>
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                            title="Editar" onclick="editarDireccion(event, '@dir.Id')">
+                                        <i class="bi bi-pencil" style="font-size:11px;"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
+                                            title="Eliminar" onclick="eliminarDireccion(event, '@dir.Id', this)">
+                                        <i class="bi bi-trash3" style="font-size:11px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="col-12" id="sinDirecciones">
+                        <p class="text-muted small">
+                            <i class="bi bi-info-circle me-1"></i>No tienes direcciones guardadas. Agrega una para continuar.
+                        </p>
+                    </div>
+                }
+            </div>
+
+            <input type="hidden" id="direccionSeleccionadaId"
+                   value="@(dirPredeterminada?.Id.ToString() ?? "")" />
+            <div id="errorDireccion" class="text-danger small mt-1" style="display:none;">
+                <i class="bi bi-exclamation-circle me-1"></i>Selecciona una dirección de entrega.
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Tabla de Productos -->
+            <div class="col-lg-8">
+                <div class="carrito-wrap">
+                    <div class="table-responsive">
+                        <table class="carrito-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px; text-align:center;">
+                                        <input type="checkbox" id="chkTodos" title="Seleccionar todos"
+                                               onchange="toggleTodos(this)"
+                                               style="width:17px;height:17px;cursor:pointer;" />
+                                    </th>
+                                    <th>Producto</th>
+                                    <th>Precio</th>
+                                    <th style="width: 140px; text-align: center;">Cantidad</th>
+                                    <th style="text-align: right;">Subtotal</th>
+                                    <th style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model)
+                                {
+                                    var imgUrl = !string.IsNullOrEmpty(item.Imagen)
+                                        ? (item.Imagen.StartsWith("http") ? item.Imagen : (item.Imagen.StartsWith("/") ? item.Imagen : "/" + item.Imagen))
+                                        : "";
+
+                                    <tr data-producto-id="@item.ProductoId" data-stock="@item.StockDisponible" data-limite="@(item.LimiteMaximoPorPedido?.ToString() ?? "")" data-subtotal="@item.Subtotal.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)">
+                                        <td style="text-align:center; vertical-align:middle;">
+                                            <input type="checkbox" class="chk-producto" value="@item.ProductoId"
+                                                   checked onchange="actualizarSeleccion()"
+                                                   style="width:17px;height:17px;cursor:pointer;" />
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-3">
+                                                @if (!string.IsNullOrEmpty(imgUrl))
+                                                {
+                                                    <img src="@imgUrl" alt="@item.Nombre" class="carrito-item-img"
+                                                         onerror="this.style.display='none'; this.nextElementSibling.classList.remove('d-none'); this.nextElementSibling.classList.add('d-flex');" />
+                                                    <div class="carrito-item-img align-items-center justify-content-center text-muted d-none"
+                                                         style="background: var(--bg-muted);">
+                                                        <i class="bi bi-capsule"></i>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="carrito-item-img d-flex align-items-center justify-content-center text-muted"
+                                                         style="background: var(--bg-muted);">
+                                                        <i class="bi bi-capsule"></i>
+                                                    </div>
+                                                }
+                                                <div>
+                                                    <span class="carrito-item-name">@item.Nombre</span>
+                                                    @if (item.LimiteMaximoPorPedido.HasValue && item.LimiteMaximoPorPedido.Value > 0)
+                                                    {
+                                                        <div class="text-muted" style="font-size: 11px;">
+                                                            <i class="bi bi-exclamation-circle me-1 text-warning"></i>Límite: máx. @item.LimiteMaximoPorPedido.Value /pedido
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-nowrap">
+                                            $@item.Precio.ToString("N2")
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                                <input type="hidden" class="item-producto-id" value="@item.ProductoId" />
+                                                <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1 btn-decrementar"
+                                                        data-producto-id="@item.ProductoId"
+                                                        onclick="ajustarCantidad('@item.ProductoId', -1, this)"
+                                                        @(item.Cantidad <= 1 ? "disabled" : "")>-</button>
+                                                <input type="number" value="@item.Cantidad" min="1" max="@item.MaximoPermitido"
+                                                       class="carrito-qty-input item-cantidad-input"
+                                                       data-producto-id="@item.ProductoId"
+                                                       data-stock="@item.StockDisponible"
+                                                       data-limite="@(item.LimiteMaximoPorPedido?.ToString() ?? "")"
+                                                       oninput="validarEntradaManualCarrito(this)"
+                                                       onchange="cambiarCantidadManual(this)" />
+                                                <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1 btn-incrementar"
+                                                        data-producto-id="@item.ProductoId"
+                                                        onclick="ajustarCantidad('@item.ProductoId', 1, this)"
+                                                        @(item.Cantidad >= item.MaximoPermitido ? "disabled" : "")>+</button>
+                                            </div>
+                                        </td>
+                                        <td style="text-align: right;" class="carrito-subtotal text-nowrap"
+                                            data-producto-id="@item.ProductoId">
+                                            $@item.Subtotal.ToString("N2")
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <button type="button" class="btn btn-link text-danger p-0"
+                                                    title="Eliminar del carrito"
+                                                    onclick="eliminarDelCarrito('@item.ProductoId', this)">
+                                                <i class="bi bi-trash3 fs-5"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center p-3 border-top"
+                         style="background: var(--bg-muted);">
+                        <button type="button"
+                                class="btn btn-outline-danger btn-sm rounded-pill d-flex align-items-center gap-1 px-3"
+                                onclick="vaciarCarrito(this)">
+                            <i class="bi bi-trash"></i> Vaciar Carrito
+                        </button>
+                        <span class="text-muted small" id="totalItemsCarrito">
+                            @Model.Sum(i => i.Cantidad) artículo(s) en total
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen de Compra -->
+            <div class="col-lg-4">
+                <div class="pedido-card">
+                    <div class="pedido-card-header">
+                        <span class="fw-bold fs-6">Resumen del Pedido</span>
+                        <i class="bi bi-receipt text-primary"></i>
+                    </div>
+                    <div class="pedido-card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Subtotal</span>
+                            <span class="fw-semibold" id="resumenSubtotal">$@total.ToString("N2")</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Envío</span>
+                            <span class="fw-semibold @(total >= 45000m ? "text-success" : "")" id="resumenEnvio">
+                                @(total >= 45000m ? "Gratis" : (total > 0 ? "$8,000.00" : "$0.00"))
+                            </span>
+                        </div>
+                        <div id="bannerEnvioGratis" class="alert py-1 px-2 mb-2 small d-flex align-items-center gap-2"
+                             style="display:none;"></div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Impuestos incluidos</span>
+                            <span class="text-muted">$0.00</span>
+                        </div>
+                        <hr />
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <span class="fw-bold fs-5 d-block">Total Estimado</span>
+                                <small class="text-muted" style="font-size:11px;">(Subtotal + Envío)</small>
+                            </div>
+                            <span class="carrito-total-amount" id="totalAPagar">$@((total + (total >= 45000m ? 0m : (total > 0 ? 8000m : 0m))).ToString("N2"))</span>
+                        </div>
+
+                        <div id="sinSeleccionWarn" class="alert alert-warning py-2 small mb-3" style="display:none;">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Selecciona al menos un producto para continuar.
+                        </div>
+                        <form id="formCheckout" method="post" action="/Tienda/Checkout"
+                              onsubmit="return prepararCheckout()">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="direccionEntrega" id="hdnDireccionEntrega" />
+                            <input type="hidden" name="productosSeleccionados" id="hdnProductosSeleccionados" />
+                            <button type="submit" id="btnIrCheckout"
+                                    class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-bag-check-fill fs-5"></i>
+                                <span>Realizar Pedido</span>
+                            </button>
+                        </form>
+
+                        <div class="text-center mt-3">
+                            <small class="text-muted d-flex align-items-center justify-content-center gap-1">
+                                <i class="bi bi-shield-lock-fill text-success"></i> Pago seguro y garantizado
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- MODAL CREAR / EDITAR DIRECCIÓN -->
+
+<div class="modal fade" id="modalDireccion" tabindex="-1" aria-labelledby="modalDireccionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-glass">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalDireccionLabel">
+                    <i class="bi bi-geo-alt-fill text-danger me-2"></i>Nueva Dirección
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="mdDirId" />
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold small">Nombre de contacto <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="mdNombre" maxlength="100"
+                               placeholder="Ej. Juan Pérez" />
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold small">Teléfono <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" id="mdTelefono" maxlength="20"
+                               placeholder="Ej. 3001234567" />
+                    </div>
+                    <!-- 1. Departamento -->
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold small">Departamento <span class="text-danger">*</span></label>
+                        <div class="custom-select-wrap" id="wrapDepartamento">
+                            <input type="text" class="form-control" id="mdDepartamento"
+                                   placeholder="Buscar departamento..." autocomplete="off"
+                                   oninput="filtrarOpciones('mdDepartamento', 'dropDepartamento')"
+                                   onfocus="mostrarDropdown('dropDepartamento')"
+                                   onblur="ocultarDropdown('dropDepartamento')" />
+                            <div class="custom-dropdown" id="dropDepartamento"></div>
+                        </div>
+                    </div>
+                    <!-- 2. Ciudad -->
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold small">Ciudad / Municipio <span class="text-danger">*</span></label>
+                        <div class="custom-select-wrap" id="wrapCiudad">
+                            <input type="text" class="form-control" id="mdCiudad"
+                                   placeholder="Selecciona primero el departamento..." autocomplete="off"
+                                   disabled
+                                   oninput="filtrarOpciones('mdCiudad', 'dropCiudad')"
+                                   onfocus="mostrarDropdown('dropCiudad')"
+                                   onblur="ocultarDropdown('dropCiudad')" />
+                            <div class="custom-dropdown" id="dropCiudad"></div>
+                        </div>
+                    </div>
+                    <!-- 3. Dirección específica -->
+                    <div class="col-12">
+                        <label class="form-label fw-semibold small">Dirección Exacta (Nomenclatura) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="mdDireccion" maxlength="300"
+                                   placeholder="Ej. Calle 45 # 12-34 / Carrera 15 # 45-23" />
+                            <button type="button" class="btn btn-outline-primary" onclick="validarDireccionMapa()"
+                                    id="btnValidarMapa" title="Validar ubicación en mapa">
+                                <i class="bi bi-geo-alt-fill me-1"></i>Validar Ubicación
+                            </button>
+                        </div>
+                        <div id="mapValidacionMsg" class="form-text"></div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="mdPredeterminada" />
+                            <label class="form-check-label small" for="mdPredeterminada">
+                                Usar como dirección predeterminada
+                            </label>
+                        </div>
+                    </div>
+                    <!-- Mapa de validación Leaflet -->
+                    <div class="col-12" id="mapaValidacionWrap" style="display:none;">
+                        <div id="mapaValidacion" style="height:220px; border-radius:12px; border:1px solid var(--border, #dee2e6);"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4"
+                        onclick="guardarDireccion()" id="btnGuardarDireccion">
+                    <i class="bi bi-check-lg me-1"></i>Guardar Dirección
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ─── Datos Colombia: departamentos y municipios ───────────────
+const COLOMBIA = {
+  "Amazonas": ["Leticia","Puerto Nariño"],
+  "Antioquia": ["Medellín","Bello","Itagüí","Envigado","Apartadó","Rionegro","Turbo","Caucasia","Sabaneta","La Estrella","Copacabana","Girardota","Barbosa","Caldas","Andes","Jericó","Santa Fe de Antioquia","Yarumal","Marinilla","El Carmen de Viboral"],
+  "Arauca": ["Arauca","Saravena","Tame","Fortul","Arauquita","Cravo Norte","Puerto Rondón"],
+  "Atlántico": ["Barranquilla","Soledad","Malambo","Sabanalarga","Baranoa","Puerto Colombia","Galapa","Palmar de Varela","Polonuevo","Ponedera"],
+  "Bogotá D.C.": ["Bogotá"],
+  "Bolívar": ["Cartagena","Magangué","Turbaco","El Carmen de Bolívar","Mompox","Arjona","Mahates","San Estanislao"],
+  "Boyacá": ["Tunja","Duitama","Sogamoso","Chiquinquirá","Paipa","Villa de Leyva","Moniquirá","Nobsa","Garagoa"],
+  "Caldas": ["Manizales","Villamaría","Chinchiná","La Dorada","Riosucio","Salamina","Aguadas","Supía","Anserma"],
+  "Caquetá": ["Florencia","San Vicente del Caguán","Puerto Rico","Belén de los Andaquíes","Cartagena del Chairá"],
+  "Casanare": ["Yopal","Aguazul","Villavicencio del Meta","Tauramena","Orocué","Trinidad","Paz de Ariporo"],
+  "Cauca": ["Popayán","Santander de Quilichao","Puerto Tejada","Patía","Caloto","Miranda","El Bordo","Corinto"],
+  "Cesar": ["Valledupar","Aguachica","Bosconia","La Jagua de Ibirico","Codazzi","Chimichagua","El Copey"],
+  "Chocó": ["Quibdó","Istmina","Tumaco","Condoto","Riosucio","Bagadó","Nuquí"],
+  "Córdoba": ["Montería","Cereté","Lorica","Sahagún","Montelíbano","Tierralta","Valencia","Planeta Rica"],
+  "Cundinamarca": ["Soacha","Fusagasugá","Facatativá","Zipaquirá","Chía","Mosquera","Madrid","Funza","Cajicá","Sopó","La Mesa","Girardot","Sibaté","Tocancipá","Bojacá","Cota"],
+  "Guainía": ["Inírida"],
+  "Guaviare": ["San José del Guaviare","Calamar","El Retorno","Miraflores"],
+  "Huila": ["Neiva","Pitalito","Garzón","La Plata","Campoalegre","Palermo","Acevedo"],
+  "La Guajira": ["Riohacha","Maicao","Fonseca","San Juan del Cesar","Uribia","Manaure","Villanueva"],
+  "Magdalena": ["Santa Marta","Ciénaga","Fundación","El Banco","Plato","Pivijay","Aracataca"],
+  "Meta": ["Villavicencio","Acacías","Granada","San Martín","Puerto López","Restrepo","Cumaral","Guamal"],
+  "Nariño": ["Pasto","Tumaco","Ipiales","Túquerres","La Unión","Samaniego","Barbacoas"],
+  "Norte de Santander": ["Cúcuta","Ocaña","Pamplona","Villa del Rosario","Los Patios","El Zulia","Tibú"],
+  "Putumayo": ["Mocoa","Puerto Asís","La Hormiga","Orito","Sibundoy","Valle del Guamuez"],
+  "Quindío": ["Armenia","Calarcá","Montenegro","Quimbaya","La Tebaida","Circasia","Filandia","Salento"],
+  "Risaralda": ["Pereira","Dosquebradas","Santa Rosa de Cabal","La Virginia","Marsella","Quinchía","Belén de Umbría"],
+  "San Andrés": ["San Andrés","Providencia"],
+  "Santander": ["Bucaramanga","Floridablanca","Girón","Piedecuesta","Barrancabermeja","San Gil","Socorro","Vélez","Barbosa"],
+  "Sucre": ["Sincelejo","Corozal","Sampués","San Marcos","Tolú","Ovejas","Morroa"],
+  "Tolima": ["Ibagué","Espinal","Honda","Melgar","Girardot","Líbano","Mariquita","Chaparral","Purificación"],
+  "Valle del Cauca": ["Cali","Buenaventura","Palmira","Tuluá","Buga","Cartago","Yumbo","Jamundí","Candelaria","Pradera","Florida","Dagua"],
+  "Vaupés": ["Mitú"],
+  "Vichada": ["Puerto Carreño","La Primavera","Santa Rosalía"]
+};
+
+const deptosOrdenados = Object.keys(COLOMBIA).sort();
+
+// ─── Mostrar / ocultar dropdown ───────────────────────
+function mostrarDropdown(dropId) {
+    const drop = document.getElementById(dropId);
+    if (drop && drop.children.length > 0) drop.classList.add('visible');
+}
+
+function ocultarDropdown(dropId) {
+    setTimeout(() => {
+        const drop = document.getElementById(dropId);
+        if (drop) drop.classList.remove('visible');
+    }, 180);
+}
+
+function filtrarOpciones(inputId, dropId) {
+    const input = document.getElementById(inputId);
+    const drop = document.getElementById(dropId);
+    if (!input || !drop) return;
+    const q = input.value.toLowerCase().trim();
+    let hayVisibles = false;
+    Array.from(drop.children).forEach(item => {
+        if (item.classList.contains('custom-dropdown-empty')) { item.remove(); return; }
+        const match = !q || item.textContent.toLowerCase().includes(q);
+        item.style.display = match ? '' : 'none';
+        if (match) hayVisibles = true;
+    });
+    if (!hayVisibles) {
+        const empty = document.createElement('div');
+        empty.className = 'custom-dropdown-empty';
+        empty.textContent = 'Sin resultados';
+        drop.appendChild(empty);
+    }
+    drop.classList.add('visible');
+}
+
+// ─── Seleccionar un item del dropdown ─────────────────
+function seleccionarItem(inputId, dropId, valor, callback) {
+    const input = document.getElementById(inputId);
+    const drop = document.getElementById(dropId);
+    if (input) input.value = valor;
+    if (drop) drop.classList.remove('visible');
+    if (callback) callback(valor);
+}
+
+// ─── Poblar departamentos ──────────────────────────────
+function poblarDepartamentos(seleccionado) {
+    const input = document.getElementById('mdDepartamento');
+    const drop = document.getElementById('dropDepartamento');
+    if (!drop) return;
+
+    drop.innerHTML = '';
+    deptosOrdenados.forEach(d => {
+        const item = document.createElement('div');
+        item.className = 'custom-dropdown-item' + (d === seleccionado ? ' active' : '');
+        item.textContent = d;
+        item.onmousedown = () => seleccionarItem('mdDepartamento', 'dropDepartamento', d, (val) => {
+            cargarCiudades();
+        });
+        drop.appendChild(item);
+    });
+
+    if (seleccionado && input) {
+        input.value = seleccionado;
+        cargarCiudades();
+    } else if (input) {
+        input.value = '';
+    }
+}
+
+// ─── Cargar ciudades del departamento seleccionado ──────
+function cargarCiudades(ciudadSeleccionada) {
+    const depto = document.getElementById('mdDepartamento').value;
+    const inputCiudad = document.getElementById('mdCiudad');
+    const drop = document.getElementById('dropCiudad');
+    if (!drop) return;
+
+    drop.innerHTML = '';
+
+    if (!depto || !COLOMBIA[depto]) {
+        if (inputCiudad) { inputCiudad.value = ''; inputCiudad.disabled = true; inputCiudad.placeholder = 'Selecciona primero el departamento...'; }
+        return;
+    }
+
+    if (inputCiudad) { inputCiudad.disabled = false; inputCiudad.placeholder = 'Buscar ciudad...'; }
+
+    const ciudades = COLOMBIA[depto].slice().sort();
+    ciudades.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'custom-dropdown-item' + (c === ciudadSeleccionada ? ' active' : '');
+        item.textContent = c;
+        item.onmousedown = () => seleccionarItem('mdCiudad', 'dropCiudad', c, null);
+        drop.appendChild(item);
+    });
+
+    if (ciudadSeleccionada && inputCiudad) {
+        inputCiudad.value = ciudadSeleccionada;
+    } else if (inputCiudad) {
+        inputCiudad.value = '';
+    }
+}
+
+// Inicializar departamentos al abrir el modal
+document.addEventListener('DOMContentLoaded', function () {
+    poblarDepartamentos();
+});
+</script>
+
+<script>
+    //  ESTADO EN MEMORIA
+
+    const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+    // Mapa en memoria: id (string) -> objeto dirección
+    let direccionesData = {};
+
+    // Instancia de mapa Leaflet (lazy)
+    let mapaLeaflet = null;
+    let mapaMarker = null;
+
+    // ─── Inicialización: leer tarjetas del DOM y poblar direccionesData ───
+    (function inicializarDirecciones() {
+        document.querySelectorAll('.direccion-card[data-id]').forEach(card => {
+            const id = card.getAttribute('data-id');
+            // Leer texto de los elementos hijos
+            const spans = card.querySelectorAll('span.fw-bold');
+            const paras = card.querySelectorAll('p.text-muted');
+            direccionesData[id] = {
+                id: id,
+                nombreContacto: spans[0]?.textContent?.trim() || '',
+                // paras[0] = dirección, paras[1] = ciudad,depto, paras[2] = teléfono
+                direccion: paras[0]?.textContent?.trim() || '',
+                ciudadDepto: paras[1]?.textContent?.trim() || '',
+                telefono: paras[2]?.textContent?.replace(/.*\s/, '').trim() || '',
+                esPredeterminada: card.classList.contains('selected')
+            };
+            // Parsear ciudad y departamento desde "Ciudad, Departamento"
+            const parts = (paras[1]?.textContent?.trim() || '').split(',');
+            direccionesData[id].ciudad = parts[0]?.trim() || '';
+            direccionesData[id].departamento = parts.slice(1).join(',').trim() || '';
+            // Teléfono: el párrafo tiene ícono + texto, limpiar
+            const telRaw = paras[2]?.textContent?.trim() || '';
+            // Extraer solo dígitos y caracteres de teléfono (quitar icono)
+            direccionesData[id].telefono = telRaw.replace(/[^\d\+\-\s\(\)]/g, '').trim();
+        });
+    })();
+
+    // SELECCIONAR DIRECCIÓN
+    function seleccionarDireccion(card) {
+        document.querySelectorAll('.direccion-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        document.getElementById('direccionSeleccionadaId').value = card.getAttribute('data-id');
+        document.getElementById('errorDireccion').style.display = 'none';
+    }
+
+    // ABRIR MODAL (nueva dirección)
+    function abrirModalDireccion() {
+        limpiarModal();
+        document.getElementById('modalDireccionLabel').innerHTML =
+            '<i class="bi bi-geo-alt-fill text-danger me-2"></i>Nueva Dirección';
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDireccion'));
+        modal.show();
+    }
+
+    let direccionValidadaOk = false;
+    let direccionValidadaTexto = "";
+
+    function limpiarModal() {
+        direccionValidadaOk = false;
+        direccionValidadaTexto = "";
+        document.getElementById('mdDirId').value = '';
+        document.getElementById('mdNombre').value = '';
+        document.getElementById('mdTelefono').value = '';
+        document.getElementById('mdDireccion').value = '';
+        poblarDepartamentos();
+        document.getElementById('mdCiudad').value = '';
+        document.getElementById('mdCiudad').disabled = true;
+        document.getElementById('mdCiudad').placeholder = 'Selecciona primero el departamento...';
+        document.getElementById('dropCiudad').innerHTML = '';
+        document.getElementById('mdPredeterminada').checked = false;
+        document.getElementById('mapValidacionMsg').textContent = '';
+        document.getElementById('mapValidacionMsg').className = 'form-text';
+        document.getElementById('mapaValidacionWrap').style.display = 'none';
+
+        const btnVal = document.getElementById('btnValidarMapa');
+        if (btnVal) {
+            btnVal.disabled = false;
+            btnVal.innerHTML = '<i class="bi bi-geo-alt-fill me-1"></i>Validar Ubicación';
+        }
+
+        // Destruir mapa si existe para evitar doble inicialización
+        if (mapaLeaflet) {
+            mapaLeaflet.remove();
+            mapaLeaflet = null;
+            mapaMarker = null;
+        }
+    }
+
+    //  EDITAR DIRECCIÓN
+    async function editarDireccion(event, id) {
+        event.stopPropagation();
+
+        // Recargar datos frescos desde el servidor
+        try {
+            const resp = await fetch('/Direccion/MisDirecciones', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await resp.json();
+            if (data.success) {
+                const dir = data.data.find(d => d.id === id || d.id.toLowerCase() === id.toLowerCase());
+                if (!dir) {
+                    mostrarToast('Dirección no encontrada', 'danger');
+                    return;
+                }
+
+                limpiarModal();
+                document.getElementById('modalDireccionLabel').innerHTML =
+                    '<i class="bi bi-pencil-square text-primary me-2"></i>Editar Dirección';
+                document.getElementById('mdDirId').value = dir.id;
+                document.getElementById('mdNombre').value = dir.nombreContacto;
+                document.getElementById('mdTelefono').value = dir.telefono;
+                document.getElementById('mdDireccion').value = dir.direccion;
+                poblarDepartamentos(dir.departamento);
+                cargarCiudades(dir.ciudad);
+                document.getElementById('mdPredeterminada').checked = dir.esPredeterminada;
+
+                // Actualizar memoria
+                direccionesData[id] = dir;
+
+                const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalDireccion'));
+                modal.show();
+            }
+        } catch (e) {
+            console.error(e);
+            mostrarToast('Error al cargar la dirección', 'danger');
+        }
+    }
+
+    // GUARDAR DIRECCIÓN (crear o editar)
+    async function guardarDireccion() {
+        const id = document.getElementById('mdDirId').value?.trim();
+        const nombre = document.getElementById('mdNombre').value?.trim();
+        const telefono = document.getElementById('mdTelefono').value?.trim();
+        const direccion = document.getElementById('mdDireccion').value?.trim();
+        const ciudad = document.getElementById('mdCiudad').value?.trim();
+        const departamento = document.getElementById('mdDepartamento').value?.trim();
+        const predeterminada = document.getElementById('mdPredeterminada').checked;
+
+        // Validación local
+        if (!nombre) { resaltarCampo('mdNombre', 'El nombre es obligatorio.'); return; }
+        if (!telefono) { resaltarCampo('mdTelefono', 'El teléfono es obligatorio.'); return; }
+        if (!departamento) { resaltarCampo('mdDepartamento', 'El departamento es obligatorio.'); return; }
+        if (!ciudad) { resaltarCampo('mdCiudad', 'La ciudad es obligatoria.'); return; }
+        if (!direccion) { resaltarCampo('mdDireccion', 'La dirección es obligatoria.'); return; }
+
+        // Validar obligatoriamente ubicación real en mapa antes de guardar
+        const claveActual = `${direccion}|${ciudad}|${departamento}`;
+        if (!direccionValidadaOk || direccionValidadaTexto !== claveActual) {
+            const okMap = await validarDireccionMapa();
+            if (!okMap) {
+                mostrarToast('Debes ingresar una dirección real válida y verificarla en el mapa.', 'danger');
+                return;
+            }
+        }
+
+        const btn = document.getElementById('btnGuardarDireccion');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando...';
+
+        try {
+            const formData = new FormData();
+            if (id) formData.append('id', id);
+            formData.append('nombreContacto', nombre);
+            formData.append('telefono', telefono);
+            formData.append('direccion', direccion);
+            formData.append('ciudad', ciudad);
+            formData.append('departamento', departamento);
+            formData.append('esPredeterminada', predeterminada.toString());
+            formData.append('__RequestVerificationToken', csrfToken);
+
+            const resp = await fetch('/Direccion/Guardar', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            const data = await resp.json();
+            if (data.success) {
+                // Cerrar modal
+                bootstrap.Modal.getInstance(document.getElementById('modalDireccion'))?.hide();
+
+                // Actualizar memoria
+                const dir = data.data;
+                direccionesData[dir.id] = dir;
+
+                mostrarToast(data.message, 'success');
+
+                // Recargar tarjetas sin recargar página
+                await recargarTarjetasDirecciones();
+            } else {
+                mostrarToast(data.message || 'Error al guardar la dirección.', 'danger');
+            }
+        } catch (e) {
+            console.error(e);
+            mostrarToast('Error al comunicar con el servidor.', 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+
+    // ELIMINAR DIRECCIÓN
+    async function eliminarDireccion(event, id, btn) {
+        event.stopPropagation();
+
+        if (!confirm('¿Eliminar esta dirección?')) return;
+
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            const formData = new FormData();
+            formData.append('id', id);
+            formData.append('__RequestVerificationToken', csrfToken);
+
+            const resp = await fetch('/Direccion/Eliminar', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            const data = await resp.json();
+            if (data.success) {
+                // Eliminar de memoria
+                delete direccionesData[id];
+
+                mostrarToast(data.message, 'success');
+
+                // Recargar tarjetas con la lista actualizada devuelta por el servidor
+                renderizarTarjetas(data.data);
+
+                // Si la dirección eliminada era la seleccionada, limpiar selección
+                const selId = document.getElementById('direccionSeleccionadaId').value;
+                if (selId === id) {
+                    document.getElementById('direccionSeleccionadaId').value = '';
+                }
+            } else {
+                mostrarToast(data.message || 'Error al eliminar.', 'danger');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        } catch (e) {
+            console.error(e);
+            mostrarToast('Error al comunicar con el servidor.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+
+    // RECARGAR TARJETAS DESDE SERVIDOR
+    async function recargarTarjetasDirecciones() {
+        try {
+            const resp = await fetch('/Direccion/MisDirecciones', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await resp.json();
+            if (data.success) {
+                // Actualizar memoria completa
+                direccionesData = {};
+                data.data.forEach(d => { direccionesData[d.id] = d; });
+                renderizarTarjetas(data.data);
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    //  RENDERIZAR TARJETAS EN EL DOM
+    function renderizarTarjetas(dirs) {
+        const contenedor = document.getElementById('listaDirecciones');
+        const seleccionadaActual = document.getElementById('direccionSeleccionadaId').value;
+
+        if (!dirs || dirs.length === 0) {
+            contenedor.innerHTML = `
+                <div class="col-12" id="sinDirecciones">
+                    <p class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>No tienes direcciones guardadas. Agrega una para continuar.
+                    </p>
+                </div>`;
+            document.getElementById('direccionSeleccionadaId').value = '';
+            return;
+        }
+
+        let nuevaSeleccionada = seleccionadaActual;
+        // Si la seleccionada ya no existe, usar la predeterminada
+        if (!dirs.find(d => d.id === nuevaSeleccionada || d.id.toLowerCase() === nuevaSeleccionada.toLowerCase())) {
+            const pred = dirs.find(d => d.esPredeterminada);
+            nuevaSeleccionada = pred ? pred.id : dirs[0].id;
+        }
+        document.getElementById('direccionSeleccionadaId').value = nuevaSeleccionada;
+
+        contenedor.innerHTML = dirs.map(dir => {
+            const isSelected = dir.id.toLowerCase() === nuevaSeleccionada.toLowerCase();
+            return `
+            <div class="col-md-6 col-lg-4">
+                <div class="direccion-card ${isSelected ? 'selected' : ''}"
+                     data-id="${dir.id}" onclick="seleccionarDireccion(this)">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <span class="fw-bold small">${escapeHtml(dir.nombreContacto)}</span>
+                        ${dir.esPredeterminada ? '<span class="badge bg-primary-subtle text-primary" style="font-size:10px;">Predeterminada</span>' : ''}
+                    </div>
+                    <p class="mb-1 text-muted" style="font-size:12px;">${escapeHtml(dir.direccion)}</p>
+                    <p class="mb-1 text-muted" style="font-size:12px;">${escapeHtml(dir.ciudad)}, ${escapeHtml(dir.departamento)}</p>
+                    <p class="mb-2 text-muted" style="font-size:12px;">
+                        <i class="bi bi-telephone me-1"></i>${escapeHtml(dir.telefono)}
+                    </p>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                title="Editar" onclick="editarDireccion(event, '${dir.id}')">
+                            <i class="bi bi-pencil" style="font-size:11px;"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
+                                title="Eliminar" onclick="eliminarDireccion(event, '${dir.id}', this)">
+                            <i class="bi bi-trash3" style="font-size:11px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Actualizar memoria
+        dirs.forEach(d => { direccionesData[d.id] = d; });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  VALIDAR DIRECCIÓN MAPA (Nominatim / Leaflet)
+    // ═══════════════════════════════════════════════════════
+    async function validarDireccionMapa() {
+        const direccion = document.getElementById('mdDireccion').value?.trim();
+        const ciudad = document.getElementById('mdCiudad').value?.trim();
+        const departamento = document.getElementById('mdDepartamento').value?.trim();
+
+        const msgEl = document.getElementById('mapValidacionMsg');
+
+        if (!departamento) {
+            msgEl.textContent = 'Selecciona un departamento primero.';
+            msgEl.className = 'form-text text-danger';
+            resaltarCampo('mdDepartamento', 'Selecciona el departamento.');
+            return false;
+        }
+
+        if (!ciudad) {
+            msgEl.textContent = 'Selecciona una ciudad primero.';
+            msgEl.className = 'form-text text-danger';
+            resaltarCampo('mdCiudad', 'Selecciona la ciudad.');
+            return false;
+        }
+
+        if (!direccion || direccion.length < 3) {
+            msgEl.textContent = 'Ingresa una dirección o nomenclatura específica.';
+            msgEl.className = 'form-text text-danger';
+            resaltarCampo('mdDireccion', 'La dirección es obligatoria.');
+            return false;
+        }
+
+        const btn = document.getElementById('btnValidarMapa');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Validando en Mapa...';
+
+        msgEl.textContent = '';
+
+        try {
+            // Llamar al servidor para geocodificar con departamento y ciudad
+            const params = new URLSearchParams({ direccion, ciudad, departamento });
+            const resp = await fetch('/Direccion/Geocodificar?' + params.toString(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                direccionValidadaOk = true;
+                direccionValidadaTexto = `${direccion}|${ciudad}|${departamento}`;
+
+                const lat = data.lat;
+                const lon = data.lon;
+
+                // Mostrar mensaje de éxito PRIMERO y mantenerlo
+                msgEl.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i><strong>Ubicación Real Confirmada:</strong> ${data.displayName}`;
+                msgEl.className = 'form-text text-success';
+
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>Ubicación Válida';
+
+                // Mostrar contenedor del mapa
+                const mapaWrap = document.getElementById('mapaValidacionWrap');
+                mapaWrap.style.display = 'block';
+
+                await new Promise(r => setTimeout(r, 250));
+
+                try {
+                    if (mapaLeaflet) {
+                        mapaLeaflet.setView([lat, lon], 16);
+                        if (mapaMarker) {
+                            mapaMarker.setLatLng([lat, lon]);
+                        } else {
+                            mapaMarker = L.marker([lat, lon]).addTo(mapaLeaflet);
+                        }
+                        mapaLeaflet.invalidateSize();
+                    } else {
+                        mapaLeaflet = L.map('mapaValidacion', { zoomControl: true }).setView([lat, lon], 16);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                            maxZoom: 19
+                        }).addTo(mapaLeaflet);
+                        mapaMarker = L.marker([lat, lon])
+                            .addTo(mapaLeaflet)
+                            .bindPopup('<b>Ubicación Confirmada</b><br>' + data.displayName)
+                            .openPopup();
+                        setTimeout(() => mapaLeaflet.invalidateSize(), 300);
+                    }
+                } catch (mapErr) {
+                    console.error('Error mapa:', mapErr);
+                }
+                return true;
+            } else {
+                direccionValidadaOk = false;
+                msgEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-danger me-1"></i><strong>Ubicación No Encontrada:</strong> ${data.message}`;
+                msgEl.className = 'form-text text-danger';
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                return false;
+            }
+        } catch (e) {
+            console.error(e);
+            direccionValidadaOk = false;
+            msgEl.textContent = 'Error al conectar con el servidor de mapas.';
+            msgEl.className = 'form-text text-danger';
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            return false;
+        }
+    }
+
+    // VALIDAR ANTES DE ENVIAR EL PEDIDO
+    function validarDireccion() {
+        const id = document.getElementById('direccionSeleccionadaId').value?.trim();
+        if (!id) {
+            const errEl = document.getElementById('errorDireccion');
+            errEl.style.display = 'block';
+            errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+
+        // Construir string de dirección desde memoria
+        const dir = direccionesData[id] || direccionesData[Object.keys(direccionesData).find(k => k.toLowerCase() === id.toLowerCase())];
+        if (dir) {
+            // Formato: "Nombre | Direccion, Ciudad, Departamento | Tel: XXX | GEO: Direccion Ciudad"
+            // El segmento GEO: es el que usa el repartidor para geocodificar
+            document.getElementById('hdnDireccionEntrega').value =
+                `${dir.nombreContacto} | ${dir.direccion}, ${dir.ciudad}, ${dir.departamento} | Tel: ${dir.telefono} | GEO: ${dir.direccion} ${dir.ciudad} ${dir.departamento}`;
+        } else {
+            // Fallback: leer de la tarjeta seleccionada
+            const card = document.querySelector(`.direccion-card.selected`);
+            if (card) {
+                const paras = card.querySelectorAll('p.text-muted');
+                const nombre = card.querySelector('span.fw-bold')?.textContent?.trim() || '';
+                const dirText = paras[0]?.textContent?.trim() || '';
+                const ciudadDepto = paras[1]?.textContent?.trim() || '';
+                const tel = paras[2]?.textContent?.trim().replace(/[^\d\+\-\s\(\)]/g, '').trim() || '';
+                document.getElementById('hdnDireccionEntrega').value =
+                    `${nombre} | ${dirText}, ${ciudadDepto} | Tel: ${tel}`;
+            }
+        }
+
+        return true;
+    }
+
+    function obtenerMaxPermitido(input) {
+        const stock = parseInt(input.getAttribute('data-stock')) || 99;
+        const limiteMax = parseInt(input.getAttribute('data-limite'));
+        if (!isNaN(limiteMax) && limiteMax > 0) {
+            return Math.min(stock, limiteMax);
+        }
+        return stock;
+    }
+
+    async function ajustarCantidad(productoId, delta, btn) {
+        const input = document.querySelector(`.item-cantidad-input[data-producto-id="${productoId}"]`);
+        if (!input) return;
+        const cantidadActual = parseInt(input.value) || 1;
+        const maxPermitido = obtenerMaxPermitido(input);
+        const nuevaCantidad = cantidadActual + delta;
+        if (nuevaCantidad < 1 || nuevaCantidad > maxPermitido) {
+            actualizarBotones(productoId);
+            return;
+        }
+        input.value = nuevaCantidad;
+        actualizarBotones(productoId);
+        await actualizarCantidadAjax(productoId, nuevaCantidad);
+    }
+
+    function validarEntradaManualCarrito(input) {
+        const maxPermitido = obtenerMaxPermitido(input);
+        let val = parseInt(input.value);
+        if (!isNaN(val) && val > maxPermitido) {
+            input.value = maxPermitido;
+            const limiteMax = parseInt(input.getAttribute('data-limite'));
+            if (!isNaN(limiteMax) && limiteMax > 0 && maxPermitido === limiteMax) {
+                mostrarToast(`El límite máximo por pedido para este producto es de ${limiteMax} unidades.`, 'warning');
+            } else {
+                mostrarToast(`Solo hay ${maxPermitido} unidades disponibles.`, 'warning');
+            }
+        }
+        const productoId = input.getAttribute('data-producto-id');
+        if (productoId) actualizarBotones(productoId);
+    }
+
+    async function cambiarCantidadManual(input) {
+        const productoId = input.getAttribute('data-producto-id');
+        const maxPermitido = obtenerMaxPermitido(input);
+        let cantidad = parseInt(input.value) || 1;
+        if (cantidad < 1) cantidad = 1;
+        if (cantidad > maxPermitido) {
+            cantidad = maxPermitido;
+            const limiteMax = parseInt(input.getAttribute('data-limite'));
+            if (!isNaN(limiteMax) && limiteMax > 0 && maxPermitido === limiteMax) {
+                mostrarToast(`El límite máximo por pedido para este producto es de ${limiteMax} unidades.`, 'warning');
+            } else {
+                mostrarToast(`Solo hay ${maxPermitido} unidades disponibles.`, 'warning');
+            }
+        }
+        input.value = cantidad;
+        actualizarBotones(productoId);
+        await actualizarCantidadAjax(productoId, cantidad);
+    }
+
+    async function actualizarCantidadAjax(productoId, cantidad) {
+        try {
+            const formData = new FormData();
+            formData.append('productoId', productoId);
+            formData.append('cantidad', cantidad);
+            if (csrfToken) formData.append('__RequestVerificationToken', csrfToken);
+
+            const response = await fetch('/Tienda/ActualizarCantidad', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                const fila = document.querySelector(`tr[data-producto-id="${productoId}"]`);
+                if (fila) {
+                    fila.setAttribute('data-subtotal', data.subtotalItem);
+                }
+                const subtotalCell = document.querySelector(`.carrito-subtotal[data-producto-id="${productoId}"]`);
+                if (subtotalCell)
+                    subtotalCell.textContent = '$' + data.subtotalItem.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+                actualizarTotales(data.totalCarrito, data.totalItems);
+                actualizarBotones(productoId);
+                mostrarToast('Cantidad actualizada', 'success');
+            } else {
+                mostrarToast(data.message || 'Error al actualizar cantidad', 'danger');
+                const input = document.querySelector(`.item-cantidad-input[data-producto-id="${productoId}"]`);
+                if (input) {
+                    if (data.limiteMaximo !== undefined) input.setAttribute('data-limite', data.limiteMaximo);
+                    if (data.stockDisponible !== undefined) input.setAttribute('data-stock', data.stockDisponible);
+                    const maxPermitido = obtenerMaxPermitido(input);
+                    if (parseInt(input.value) > maxPermitido) {
+                        input.value = maxPermitido;
+                    }
+                    actualizarBotones(productoId);
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            mostrarToast('Error al comunicar con el servidor', 'danger');
+        }
+    }
+
+    function actualizarBotones(productoId) {
+        const input = document.querySelector(`.item-cantidad-input[data-producto-id="${productoId}"]`);
+        if (!input) return;
+        const cantidad = parseInt(input.value) || 1;
+        const maxPermitido = obtenerMaxPermitido(input);
+        const btnMenos = document.querySelector(`.btn-decrementar[data-producto-id="${productoId}"]`);
+        const btnMas = document.querySelector(`.btn-incrementar[data-producto-id="${productoId}"]`);
+        if (btnMenos) btnMenos.disabled = cantidad <= 1;
+        if (btnMas) btnMas.disabled = cantidad >= maxPermitido;
+    }
+
+    async function eliminarDelCarrito(productoId, btn) {
+        if (!confirm('¿Eliminar este producto del carrito?')) return;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        try {
+            const formData = new FormData();
+            formData.append('productoId', productoId);
+            if (csrfToken) formData.append('__RequestVerificationToken', csrfToken);
+            const response = await fetch('/Tienda/EliminarDelCarrito', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+            if (data.success) {
+                const fila = document.querySelector(`tr[data-producto-id="${productoId}"]`);
+                if (fila) {
+                    fila.style.transition = 'opacity 0.3s ease';
+                    fila.style.opacity = '0';
+                    setTimeout(() => {
+                        fila.remove();
+                        if (data.totalItems === 0) window.location.reload();
+                        else actualizarTotales(data.totalCarrito, data.totalItems);
+                    }, 300);
+                }
+                mostrarToast(data.message || 'Producto eliminado', 'success');
+            } else {
+                mostrarToast(data.message || 'Error al eliminar producto', 'danger');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-trash3 fs-5"></i>';
+            }
+        } catch (e) {
+            console.error(e);
+            mostrarToast('Error al comunicar con el servidor', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-trash3 fs-5"></i>';
+        }
+    }
+
+    async function vaciarCarrito(btn) {
+        if (!confirm('¿Seguro que deseas vaciar todo el carrito?')) return;
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Vaciando...';
+        try {
+            const formData = new FormData();
+            if (csrfToken) formData.append('__RequestVerificationToken', csrfToken);
+            const response = await fetch('/Tienda/VaciarCarrito', { method: 'POST', body: formData });
+            if (response.ok) window.location.reload();
+            else {
+                mostrarToast('Error al vaciar el carrito', 'danger');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        } catch (e) {
+            console.error(e);
+            mostrarToast('Error al comunicar con el servidor', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+
+    function actualizarTotales(totalCarrito, totalItems) {
+        actualizarSeleccion();
+        const totalItemsEl = document.getElementById('totalItemsCarrito');
+        if (totalItemsEl) totalItemsEl.textContent = totalItems + ' artículo(s) en total';
+        if (typeof actualizarBadgeCarrito === 'function') actualizarBadgeCarrito(totalItems);
+    }
+
+    function resaltarCampo(id, mensaje) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.classList.add('is-invalid');
+        el.focus();
+        // Remover resaltado al escribir
+        el.addEventListener('input', () => el.classList.remove('is-invalid'), { once: true });
+        mostrarToast(mensaje, 'warning');
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // Limpiar mapa al cerrar el modal (para evitar problemas de resize)
+    document.getElementById('modalDireccion').addEventListener('hidden.bs.modal', () => {
+        if (mapaLeaflet) {
+            mapaLeaflet.remove();
+            mapaLeaflet = null;
+            mapaMarker = null;
+        }
+        document.getElementById('mapaValidacionWrap').style.display = 'none';
+    });
+
+    function toggleTodos(chk) {
+        document.querySelectorAll('.chk-producto').forEach(c => c.checked = chk.checked);
+        actualizarSeleccion();
+    }
+
+    function actualizarSeleccion() {
+        const checkboxes = document.querySelectorAll('.chk-producto');
+        const todas = Array.from(checkboxes);
+        const marcadas = todas.filter(c => c.checked);
+
+        // Sincronizar "Seleccionar todos"
+        const chkTodos = document.getElementById('chkTodos');
+        if (chkTodos) {
+            chkTodos.indeterminate = marcadas.length > 0 && marcadas.length < todas.length;
+            chkTodos.checked = marcadas.length === todas.length;
+        }
+
+        // Recalcular subtotal con productos seleccionados
+        let subtotal = 0;
+        marcadas.forEach(c => {
+            const fila = c.closest('tr');
+            if (fila) {
+                const sub = parseFloat(fila.getAttribute('data-subtotal')) || 0;
+                subtotal += sub;
+            }
+        });
+
+        // Envío: gratis si subtotal >= $45.000, si menor $8.000 (o $0 si nada seleccionado)
+        const costoEnvio = (marcadas.length === 0) ? 0 : (subtotal >= 45000 ? 0 : 8000);
+        const totalEstimado = subtotal + costoEnvio;
+
+        const fmt = v => '$' + v.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        const resumenSubtotal = document.getElementById('resumenSubtotal');
+        const resumenEnvio    = document.getElementById('resumenEnvio');
+        const totalAPagar     = document.getElementById('totalAPagar');
+        const bannerEnvio     = document.getElementById('bannerEnvioGratis');
+
+        if (resumenSubtotal) resumenSubtotal.textContent = fmt(subtotal);
+
+        if (resumenEnvio) {
+            if (marcadas.length === 0) {
+                resumenEnvio.className = 'text-muted fw-semibold';
+                resumenEnvio.textContent = '$0.00';
+            } else if (costoEnvio === 0) {
+                resumenEnvio.className = 'text-success fw-semibold';
+                resumenEnvio.textContent = 'Gratis';
+            } else {
+                resumenEnvio.className = 'fw-semibold';
+                resumenEnvio.textContent = fmt(costoEnvio);
+            }
+        }
+
+        if (bannerEnvio) {
+            if (marcadas.length === 0) {
+                bannerEnvio.style.display = 'none';
+            } else if (subtotal >= 45000) {
+                bannerEnvio.style.display = 'flex';
+                bannerEnvio.className = 'alert alert-success py-1 px-2 mb-2 d-flex align-items-center gap-2 small';
+                bannerEnvio.innerHTML = '<i class="bi bi-truck text-success fs-6"></i><div><strong>¡Envío Gratis aplicado!</strong> Compra mayor a $45.000.</div>';
+            } else {
+                const falta = 45000 - subtotal;
+                bannerEnvio.style.display = 'flex';
+                bannerEnvio.className = 'alert alert-warning py-1 px-2 mb-2 d-flex align-items-center gap-2 small';
+                bannerEnvio.innerHTML = `<i class="bi bi-info-circle-fill text-warning fs-6"></i><div>Envío $8.000. ¡Agrega <strong>${fmt(falta)}</strong> más para tener <strong>Envío Gratis</strong>!</div>`;
+            }
+        }
+
+        if (totalAPagar) totalAPagar.textContent = fmt(totalEstimado);
+
+        // Ocultar advertencia si hay selección
+        const warn = document.getElementById('sinSeleccionWarn');
+        if (warn) warn.style.display = marcadas.length === 0 ? 'block' : 'none';
+    }
+
+    function prepararCheckout() {
+        // Validar que haya al menos un producto seleccionado
+        const seleccionados = Array.from(document.querySelectorAll('.chk-producto:checked'))
+            .map(c => c.value);
+
+        if (seleccionados.length === 0) {
+            const warn = document.getElementById('sinSeleccionWarn');
+            if (warn) { warn.style.display = 'block'; warn.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            return false;
+        }
+
+        // Validar que haya dirección seleccionada
+        const id = document.getElementById('direccionSeleccionadaId').value?.trim();
+        if (!id) {
+            const errEl = document.getElementById('errorDireccion');
+            if (errEl) { errEl.style.display = 'block'; errEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            return false;
+        }
+
+        // Construir string de dirección
+        const dir = direccionesData[id] || direccionesData[Object.keys(direccionesData).find(k => k.toLowerCase() === id.toLowerCase())];
+        if (dir) {
+            document.getElementById('hdnDireccionEntrega').value =
+                `${dir.nombreContacto} | ${dir.direccion}, ${dir.ciudad}, ${dir.departamento} | Tel: ${dir.telefono} | GEO: ${dir.direccion} ${dir.ciudad} ${dir.departamento}`;
+        } else {
+            const card = document.querySelector('.direccion-card.selected');
+            if (card) {
+                const paras = card.querySelectorAll('p.text-muted');
+                const nombre = card.querySelector('span.fw-bold')?.textContent?.trim() || '';
+                const dirText = paras[0]?.textContent?.trim() || '';
+                const ciudadDepto = paras[1]?.textContent?.trim() || '';
+                const tel = paras[2]?.textContent?.trim().replace(/[^\d\+\-\s\(\)]/g, '').trim() || '';
+                document.getElementById('hdnDireccionEntrega').value = `${nombre} | ${dirText}, ${ciudadDepto} | Tel: ${tel}`;
+            }
+        }
+
+        // Guardar IDs seleccionados (separados por coma)
+        document.getElementById('hdnProductosSeleccionados').value = seleccionados.join(',');
+
+        return true;
+    }
+
+    // Inicializar totales al cargar
+    document.addEventListener('DOMContentLoaded', () => actualizarSeleccion());
+</script>
+}

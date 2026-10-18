@@ -1,0 +1,17 @@
+## Build and output
+[Bb]in/
+[Oo]bj/
+out/
+
+## Visual Studio & IDEs
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+.vscode/
+.idea/
+
+## OS generated
+.DS_Store
+Thumbs.db

@@ -1,0 +1,567 @@
+@model IEnumerable<Drogueria.Models.Producto>
+@{
+    Layout = "~/Views/Shared/_LayoutCliente.cshtml";
+    ViewData["Title"] = "Catálogo de Medicamentos";
+    ViewData["ActiveNav"] = "catalogo";
+    var categorias = ViewBag.Categorias as List<Drogueria.Models.Categoria> ?? new List<Drogueria.Models.Categoria>();
+    var totalProductos = Model.Count();
+}
+
+<div class="container-fluid px-3 px-lg-5">
+
+    <!-- Alertas Flash del Servidor (si existen) -->
+    @if (TempData["Exito"] != null || TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm rounded-4 mb-4" role="alert">
+            <i class="bi bi-check-circle-fill fs-5"></i>
+            <div>@(TempData["Exito"] ?? TempData["Success"])</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm rounded-4 mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>@TempData["Error"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <!-- Panel de Filtros Interactivos y Búsqueda en Vivo -->
+    <div class="catalogo-filters-panel">
+        <div class="row g-3 align-items-center">
+            <!-- Barra de Búsqueda en Tiempo Real -->
+            <div class="col-lg-5 col-md-6">
+                <div class="filter-search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="buscadorEnVivo" placeholder="Buscar por nombre, descripción o componente..." autocomplete="off" maxlength="100" />
+                    <button type="button" id="btnLimpiarBusqueda" class="filter-search-clear" title="Limpiar búsqueda">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtro de Rango de Precios -->
+            <div class="col-lg-3 col-md-6">
+                <div class="d-flex align-items-center gap-2">
+                    <label for="filtroPrecio" class="small text-muted fw-semibold text-nowrap mb-0">
+                        <i class="bi bi-cash-coin me-1 text-primary"></i>Precio:
+                    </label>
+                    <select id="filtroPrecio" class="filter-select-sm w-100">
+                        <option value="todos">Todos los precios</option>
+                        <option value="0-10000">Menos de $10.000</option>
+                        <option value="10000-30000">$10.000 - $30.000</option>
+                        <option value="30000-60000">$30.000 - $60.000</option>
+                        <option value="60000-999999">Más de $60.000</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Ordenamiento -->
+            <div class="col-lg-2 col-md-6">
+                <div class="d-flex align-items-center gap-2">
+                    <label for="ordenarPor" class="small text-muted fw-semibold text-nowrap mb-0">
+                        <i class="bi bi-sort-down me-1 text-primary"></i>Orden:
+                    </label>
+                    <select id="ordenarPor" class="filter-select-sm w-100">
+                        <option value="nombre-asc">Nombre (A - Z)</option>
+                        <option value="nombre-desc">Nombre (Z - A)</option>
+                        <option value="precio-asc">Precio: Menor a Mayor</option>
+                        <option value="precio-desc">Precio: Mayor a Menor</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Filtro Stock y Botón Limpiar -->
+            <div class="col-lg-2 col-md-6 d-flex align-items-center justify-content-lg-end gap-3">
+<button type="button" id="btnResetearFiltros" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-none align-items-center gap-1" title="Restablecer todos los filtros">
+                    <i class="bi bi-arrow-counterclockwise"></i> Limpiar
+                </button>
+            </div>
+        </div>
+
+        <!-- Pastillas / Pills de Categorías con desplazamiento suave -->
+        <div class="mt-3 pt-3 border-top d-flex align-items-center gap-2">
+            <span class="small text-muted fw-bold text-nowrap me-2"><i class="bi bi-tags-fill me-1 text-primary"></i>Categoría:</span>
+            <div class="filter-pills-scroll" id="contenedorPillsCategorias">
+                <button type="button" class="filter-pill-btn active" data-categoria="">
+                    Todas
+                </button>
+                @foreach (var cat in categorias)
+                {
+                    <button type="button" class="filter-pill-btn" data-categoria="@cat.Id">
+                        @cat.Nombre
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Estado de Resultados en Vivo -->
+    <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+        <span class="text-muted small fw-medium">
+            Mostrando <strong id="contadorVisible" class="text-primary">@totalProductos</strong> de @totalProductos medicamentos
+        </span>
+    </div>
+
+    <!-- Mensaje cuando ningún filtro coincide -->
+    <div id="mensajeSinResultados" class="tienda-empty" style="display: none;">
+        <i class="bi bi-search text-muted"></i>
+        <h3>No se encontraron medicamentos</h3>
+        <p>Intenta ajustar la búsqueda, ampliar el rango de precios o seleccionar otra categoría.</p>
+        <button type="button" class="tienda-empty-btn mt-2" onclick="resetearTodosLosFiltros()">
+            <i class="bi bi-arrow-counterclockwise"></i>
+            <span>Ver todos los medicamentos</span>
+        </button>
+    </div>
+
+    <!-- Grid de Productos -->
+    <div class="catalogo-grid" id="gridProductos">
+        @foreach (var p in Model)
+        {
+            var imgUrl = !string.IsNullOrEmpty(p.Imagen)
+                ? (p.Imagen.StartsWith("http") ? p.Imagen : (p.Imagen.StartsWith("/") ? p.Imagen : "/" + p.Imagen))
+                : "";
+
+            <div class="producto-card"
+                 data-id="@p.Id"
+                 data-nombre="@p.Nombre.ToLowerInvariant()"
+                 data-miligramos="@p.Miligramos"
+                 data-unidad-medida="@(string.IsNullOrEmpty(p.UnidadMedida) ? "mg" : p.UnidadMedida)"
+                 data-limite-maximo="@(p.LimiteMaximoPorPedido?.ToString() ?? "")"
+                 data-desc="@((p.Descripcion ?? "").ToLowerInvariant())"
+                 data-categoria="@(p.CategoriaId)"
+                 data-categoria-nombre="@(p.Categoria?.Nombre ?? "General")"
+                 data-precio="@p.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                 data-stock="@p.Stock"
+                 onclick="abrirModalProducto('@p.Id', '@Html.Raw(Html.Encode(p.Nombre))', '@p.Miligramos', '@(string.IsNullOrEmpty(p.UnidadMedida) ? "mg" : p.UnidadMedida)', '@Html.Raw(Html.Encode(p.Categoria?.Nombre ?? "General"))', '@p.Precio.ToString("N2")', '@p.Stock', '@(p.LimiteMaximoPorPedido?.ToString() ?? "")', '@Html.Raw(Html.Encode(p.Descripcion ?? "Sin descripción adicional disponible."))', '@imgUrl')"
+                 role="button"
+                 tabindex="0">
+
+                <!-- Imagen en Grande -->
+                <div class="producto-card-img">
+                    @if (!string.IsNullOrEmpty(imgUrl))
+                    {
+                        <img src="@imgUrl" alt="@p.Nombre" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                        <div class="no-image" style="display: none;">
+                            <i class="bi bi-capsule"></i>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="no-image">
+                            <i class="bi bi-capsule"></i>
+                        </div>
+                    }
+
+                    <!-- Badge de Categoría -->
+                    <span class="producto-card-cat">
+                        @(p.Categoria?.Nombre ?? "General")
+                    </span>
+
+                    <!-- Botón Flotante Superior Derecho para añadir al carrito SIN SALTO DE PÁGINA (AJAX) -->
+                    <button type="button"
+                            class="btn-add-cart-float"
+                            title="Añadir 1 al carrito"
+                            onclick="agregarAlCarritoAjax(event, '@p.Id', 1, this)">
+                        <i class="bi bi-cart-plus"></i>
+                    </button>
+                </div>
+
+                <!-- Datos abajo: Nombre, Dosis/Unidad y Precio -->
+                <div class="producto-card-body">
+                    <div class="producto-card-name" title="@p.Nombre">
+                        @p.Nombre <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:10px;">@p.Miligramos @(string.IsNullOrEmpty(p.UnidadMedida) ? "mg" : p.UnidadMedida)</span>
+                    </div>
+                    @if (p.LimiteMaximoPorPedido.HasValue)
+                    {
+                        <div class="small text-danger mt-1" style="font-size: 10px;">
+                            <i class="bi bi-exclamation-circle me-1"></i>Límite: máx. @p.LimiteMaximoPorPedido pastillas/pedido
+                        </div>
+                    }
+                    <div class="d-flex align-items-center justify-content-between mt-1">
+                        <span class="producto-card-price">$@p.Precio.ToString("N2")</span>
+                        <span class="producto-card-stock @(p.Stock <= p.StockMinimo ? "text-warning" : "text-muted")">
+                            <i class="bi bi-box-seam me-1"></i> Stock: @p.Stock
+                        </span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Detalle del Producto -->
+<div class="modal fade modal-producto" id="modalDetalleProducto" tabindex="-1" aria-labelledby="modalDetalleProductoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <!-- Header con botón cerrar estilizado -->
+            <div class="modal-producto-header">
+                <span class="modal-producto-badge" id="modalProductoCat">
+                    <i class="bi bi-tag-fill me-1"></i> Categoría
+                </span>
+                <button type="button" class="modal-producto-close" data-bs-dismiss="modal" aria-label="Cerrar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body p-0">
+                <div class="row g-0">
+                    <!-- Columna Izquierda: Showcase de Imagen -->
+                    <div class="col-md-5 modal-producto-img-col">
+                        <div class="modal-producto-img-wrapper">
+                            <img id="modalProductoImg" src="" alt="Producto" class="modal-producto-img" />
+                            <div id="modalProductoNoImg" class="modal-producto-no-img" style="display: none;">
+                                <i class="bi bi-capsule"></i>
+                                <span class="small mt-2">Sin imagen disponible</span>
+                            </div>
+                        </div>
+                        <div class="modal-producto-trust-badges">
+                            <div class="trust-item"><i class="bi bi-shield-check text-success"></i> Producto Original</div>
+                            <div class="trust-item"><i class="bi bi-truck text-primary"></i> Envío rápido a domicilio</div>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Información del Producto -->
+                    <div class="col-md-7">
+                        <div class="modal-producto-info">
+                            <h3 class="modal-producto-title" id="modalProductoNombre">Nombre del Medicamento</h3>
+
+                            <div class="modal-producto-price-wrap">
+                                <span class="modal-producto-price" id="modalProductoPrecio">$0.00</span>
+                                <span class="modal-producto-unit">Impuestos incluidos</span>
+                            </div>
+
+                            <div class="modal-producto-stock-badge mb-3">
+                                <span class="stock-indicator-dot" id="modalStockDot"></span>
+                                <span>Existencia: <strong id="modalProductoStock">0</strong> unidades</span>
+                            </div>
+
+                            <div class="modal-producto-desc-box">
+                                <div class="desc-header"><i class="bi bi-file-text me-1"></i> Descripción del producto</div>
+                                <p class="modal-producto-desc" id="modalProductoDesc">
+                                    Descripción...
+                                </p>
+                            </div>
+
+                            <!-- Formulario de añadir al carrito sin saltos vía AJAX -->
+                            <form id="formModalAgregarCarrito" onsubmit="agregarDesdeModal(event)">
+                                <input type="hidden" name="productoId" id="modalProductoId" value="" />
+                                
+                                <div class="modal-producto-qty-row">
+                                    <label for="modalCantidad" class="qty-label">Cantidad:</label>
+                                    <div class="modal-qty-stepper">
+                                        <button type="button" class="qty-btn" id="btnModalMinus" onclick="cambiarCantidadModal(-1)">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                        <input type="number" id="modalCantidad" name="cantidad" value="1" min="1" max="99" class="qty-input" oninput="validarEntradaModal(this)" onchange="validarEntradaModal(this)" />
+                                        <button type="button" class="qty-btn" id="btnModalPlus" onclick="cambiarCantidadModal(1)">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="modal-producto-actions">
+                                    <button type="submit" id="btnModalAdd" class="modal-btn-add">
+                                        <i class="bi bi-cart-plus-fill"></i>
+                                        <span>Añadir al Carrito</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // ── GESTIÓN DE FILTROS EN VIVO ──────────────────────────────
+    const buscador        = document.getElementById('buscadorEnVivo');
+    const btnLimpiar      = document.getElementById('btnLimpiarBusqueda');
+    const filtroPrecio    = document.getElementById('filtroPrecio');
+    const ordenarPor      = document.getElementById('ordenarPor');
+    const filtroStock     = document.getElementById('filtroSoloStock');
+    const btnResetear     = document.getElementById('btnResetearFiltros');
+    const pillsCategorias = document.querySelectorAll('#contenedorPillsCategorias .filter-pill-btn');
+    const grid            = document.getElementById('gridProductos');
+    const tarjetas        = Array.from(grid ? grid.querySelectorAll('.producto-card') : []);
+    const contadorVisible = document.getElementById('contadorVisible');
+    const totalProductos  = tarjetas.length;
+    const mensajeSinResultados = document.getElementById('mensajeSinResultados');
+
+    let categoriaSeleccionada = "";
+
+    function actualizarBtnResetear(hayFiltros) {
+        if (!btnResetear) return;
+        if (hayFiltros) {
+            btnResetear.classList.remove('d-none');
+            btnResetear.classList.add('d-inline-flex');
+        } else {
+            btnResetear.classList.add('d-none');
+            btnResetear.classList.remove('d-inline-flex');
+        }
+    }
+
+    function aplicarFiltros() {
+        const texto      = (buscador?.value || "").trim().toLowerCase();
+        const precioRango = filtroPrecio?.value || "todos";
+        const soloStock  = filtroStock?.checked ?? false;
+
+        // Botón limpiar búsqueda
+        if (btnLimpiar) btnLimpiar.style.display = texto.length > 0 ? "block" : "none";
+
+        // Botón resetear filtros
+        const hayFiltros = texto !== "" || categoriaSeleccionada !== "" || precioRango !== "todos" || soloStock;
+        actualizarBtnResetear(hayFiltros);
+
+        let visibles = 0;
+
+        tarjetas.forEach(card => {
+            const nombre = card.getAttribute('data-nombre') || "";
+            const desc   = card.getAttribute('data-desc')   || "";
+            const cat    = card.getAttribute('data-categoria') || "";
+            const precio = parseFloat(card.getAttribute('data-precio') || "0");
+            const stock  = parseInt(card.getAttribute('data-stock')   || "0");
+
+            const coincideTexto = texto === "" || nombre.includes(texto) || desc.includes(texto);
+            const coincideCat   = categoriaSeleccionada === "" || cat === categoriaSeleccionada;
+            const coincideStock = !soloStock || stock > 0;
+
+            let coincidePrecio = true;
+            if      (precioRango === "0-10000")      coincidePrecio = precio < 10000;
+            else if (precioRango === "10000-30000")  coincidePrecio = precio >= 10000 && precio <= 30000;
+            else if (precioRango === "30000-60000")  coincidePrecio = precio > 30000  && precio <= 60000;
+            else if (precioRango === "60000-999999") coincidePrecio = precio > 60000;
+
+            if (coincideTexto && coincideCat && coincidePrecio && coincideStock) {
+                card.classList.remove('filtrado-oculto');
+                visibles++;
+            } else {
+                card.classList.add('filtrado-oculto');
+            }
+        });
+
+        ordenarTarjetas();
+
+        if (contadorVisible) contadorVisible.innerText = visibles;
+        if (mensajeSinResultados) {
+            mensajeSinResultados.style.display = visibles === 0 ? "block" : "none";
+        }
+    }
+
+    function ordenarTarjetas() {
+        if (!ordenarPor || !grid) return;
+        const criterio = ordenarPor.value;
+        const visibles = tarjetas.filter(t => !t.classList.contains('filtrado-oculto'));
+
+        visibles.sort((a, b) => {
+            switch (criterio) {
+                case "nombre-asc":  return a.getAttribute('data-nombre').localeCompare(b.getAttribute('data-nombre'));
+                case "nombre-desc": return b.getAttribute('data-nombre').localeCompare(a.getAttribute('data-nombre'));
+                case "precio-asc":  return parseFloat(a.getAttribute('data-precio')) - parseFloat(b.getAttribute('data-precio'));
+                case "precio-desc": return parseFloat(b.getAttribute('data-precio')) - parseFloat(a.getAttribute('data-precio'));
+                default: return 0;
+            }
+        });
+
+        visibles.forEach(card => grid.appendChild(card));
+    }
+
+    function resetearTodosLosFiltros() {
+        if (buscador)     buscador.value = "";
+        if (filtroPrecio) filtroPrecio.value = "todos";
+        if (ordenarPor)   ordenarPor.value = "nombre-asc";
+        if (filtroStock)  filtroStock.checked = false;
+        categoriaSeleccionada = "";
+
+        pillsCategorias.forEach(p => {
+            p.classList.toggle('active', p.getAttribute('data-categoria') === "");
+        });
+
+        aplicarFiltros();
+    }
+
+    // Eventos
+    buscador?.addEventListener('input', aplicarFiltros);
+    btnLimpiar?.addEventListener('click', () => { if (buscador) { buscador.value = ""; buscador.focus(); } aplicarFiltros(); });
+    filtroPrecio?.addEventListener('change', aplicarFiltros);
+    ordenarPor?.addEventListener('change', ordenarTarjetas);
+    filtroStock?.addEventListener('change', aplicarFiltros);
+    btnResetear?.addEventListener('click', resetearTodosLosFiltros);
+
+    pillsCategorias.forEach(pill => {
+        pill.addEventListener('click', () => {
+            pillsCategorias.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            categoriaSeleccionada = pill.getAttribute('data-categoria') || "";
+            aplicarFiltros();
+        });
+    });
+
+    // ── AGREGAR AL CARRITO VÍA AJAX (SIN SALTO NI RECARGA) ──
+    async function agregarAlCarritoAjax(event, productoId, cantidad, btn) {
+        if (event) event.stopPropagation();
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span>';
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('productoId', productoId);
+            formData.append('cantidad', cantidad);
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            if (token) formData.append('__RequestVerificationToken', token);
+
+            const response = await fetch('/Tienda/AgregarAlCarrito', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Actualizar badges en topbar con animación bounce
+                actualizarBadgeCarrito(data.totalItems);
+                // Mostrar toast no intrusivo
+                mostrarToast(data.message || 'Medicamento añadido al carrito', 'success');
+            } else {
+                mostrarToast(data.message || 'No se pudo agregar el producto', 'danger');
+            }
+        } catch (e) {
+            mostrarToast('Error al comunicar con el servidor', 'danger');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-cart-plus"></i>';
+            }
+        }
+    }
+
+    // Modal de Detalle
+    function abrirModalProducto(id, nombre, mg, unidadMedida, cat, precio, stock, limiteMax, desc, img) {
+        document.getElementById('modalProductoId').value = id;
+        const unidad = unidadMedida || 'mg';
+        document.getElementById('modalProductoNombre').innerHTML = `${nombre} <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 align-middle ms-2">${mg} ${unidad}</span>`;
+        document.getElementById('modalProductoCat').innerHTML = '<i class="bi bi-tag-fill me-1"></i> ' + cat;
+        document.getElementById('modalProductoPrecio').innerText = '$' + precio;
+        document.getElementById('modalProductoStock').innerText = stock;
+        document.getElementById('modalProductoDesc').innerText = desc || 'Sin descripción adicional disponible.';
+        
+        // Indicador de color para el stock
+        const stockNum = parseInt(stock) || 0;
+        const dot = document.getElementById('modalStockDot');
+        if (dot) {
+            if (stockNum > 5) {
+                dot.style.background = '#22c55e';
+                dot.style.boxShadow = '0 0 8px rgba(34, 197, 94, 0.6)';
+            } else if (stockNum > 0) {
+                dot.style.background = '#f59e0b';
+                dot.style.boxShadow = '0 0 8px rgba(245, 158, 11, 0.6)';
+            } else {
+                dot.style.background = '#ef4444';
+                dot.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.6)';
+            }
+        }
+
+        const inputQty = document.getElementById('modalCantidad');
+        inputQty.value = 1;
+        const limiteNum = parseInt(limiteMax);
+        const stockNumVal = stockNum || 0;
+        const maxVal = (!isNaN(limiteNum) && limiteNum > 0) ? Math.min(stockNumVal, limiteNum) : stockNumVal;
+        inputQty.max = maxVal > 0 ? maxVal : 1;
+        actualizarBotonesModal();
+
+        const imgEl = document.getElementById('modalProductoImg');
+        const noImgEl = document.getElementById('modalProductoNoImg');
+
+        if (img && img.trim() !== '') {
+            imgEl.src = img;
+            imgEl.style.display = 'block';
+            noImgEl.style.display = 'none';
+        } else {
+            imgEl.style.display = 'none';
+            noImgEl.style.display = 'block';
+        }
+
+        const modalEl = document.getElementById('modalDetalleProducto');
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function actualizarBotonesModal() {
+        const input = document.getElementById('modalCantidad');
+        if (!input) return;
+        let val = parseInt(input.value) || 1;
+        let max = parseInt(input.max) || 99;
+        const btnMinus = document.getElementById('btnModalMinus');
+        const btnPlus = document.getElementById('btnModalPlus');
+        if (btnMinus) btnMinus.disabled = val <= 1;
+        if (btnPlus) btnPlus.disabled = val >= max;
+    }
+
+    function cambiarCantidadModal(delta) {
+        const input = document.getElementById('modalCantidad');
+        let val = parseInt(input.value) || 1;
+        let max = parseInt(input.max) || 99;
+        val += delta;
+        if (val < 1) val = 1;
+        if (val > max) val = max;
+        input.value = val;
+        actualizarBotonesModal();
+    }
+
+    function validarEntradaModal(input) {
+        let val = parseInt(input.value);
+        let max = parseInt(input.max) || 99;
+        if (!isNaN(val) && val > max) {
+            input.value = max;
+            mostrarToast(`La cantidad máxima permitida para este producto es de ${max} unidades.`, 'warning');
+        }
+        if (!isNaN(val) && val < 1) {
+            input.value = 1;
+        }
+        actualizarBotonesModal();
+    }
+
+    async function agregarDesdeModal(e) {
+        e.preventDefault();
+        const id = document.getElementById('modalProductoId').value;
+        const cant = document.getElementById('modalCantidad').value || 1;
+        const btn = document.getElementById('btnModalAdd');
+
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Añadiendo...';
+
+        await agregarAlCarritoAjax(null, id, cant, null);
+
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+
+        const modalEl = document.getElementById('modalDetalleProducto');
+        bootstrap.Modal.getInstance(modalEl)?.hide();
+    }
+
+    // Auto-abrir modal si viene con parámetro de URL (ej: /Tienda/Catalogo?abrirProducto=guid)
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const productoIdParam = urlParams.get('abrirProducto') || urlParams.get('productoId');
+        if (productoIdParam) {
+            const card = document.querySelector(`.producto-card[data-id="${productoIdParam}"]`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                card.click();
+            }
+        }
+    });
+</script>
+}

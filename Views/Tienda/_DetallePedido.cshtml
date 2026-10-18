@@ -1,0 +1,731 @@
+@model Drogueria.Models.Pedido
+@{
+    Layout = "~/Views/Shared/_LayoutCliente.cshtml";
+    var shortId = Model.Id.ToString().Substring(0, 8).ToUpper();
+    ViewData["Title"] = $"Detalle del Pedido #{shortId}";
+    ViewData["ActiveNav"] = "pedidos";
+
+    var isEnCamino = Model.Estado == "En camino";
+    var isEntregado = Model.Estado == "Entregado";
+    var isCancelado = Model.Estado == "Cancelado";
+    var estadoClase = Model.Estado.ToLower() switch
+    {
+        "confirmado" => "confirmado",
+        "en camino" => "confirmado",
+        "entregado" => "entregado",
+        "cancelado" => "cancelado",
+        _ => "pendiente"
+    };
+
+    var partesDir = (Model.DireccionEntrega ?? "").Split('|');
+    var nombreContacto = partesDir.Length > 0 && !string.IsNullOrWhiteSpace(partesDir[0]) ? partesDir[0].Trim() : (Model.Usuario != null ? $"{Model.Usuario.Nombre} {Model.Usuario.Apellido}".Trim() : "Cliente");
+    var dirCalle = partesDir.Length > 1 ? partesDir[1].Trim() : (Model.DireccionEntrega ?? "Dirección registrada");
+    var dirTel = partesDir.Length > 2 ? partesDir[2].Trim() : "";
+    if (dirTel.Contains("| GEO:")) dirTel = dirTel.Split("| GEO:")[0].Trim();
+    var geoSeg = partesDir.FirstOrDefault(s => s.TrimStart().StartsWith("GEO:"));
+    var geoQuery = geoSeg != null ? geoSeg.Replace("GEO:", "").Trim() : dirCalle;
+
+    var subtotalProductos = Model.Detalles.Sum(d => d.Subtotal);
+    var costoEnvio = subtotalProductos >= 45000m ? 0m : 8000m;
+    var diferencia = Model.Total - subtotalProductos - costoEnvio;
+    var propina = diferencia > 0m ? diferencia : 0m;
+}
+
+<!-- Leaflet CSS si está en camino -->
+@if (isEnCamino)
+{
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+}
+
+<style>
+.order-detail-wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+.order-detail-card {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.04);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+.order-detail-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+    background: var(--bg-muted, #f8fafc);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.order-detail-body {
+    padding: 20px;
+}
+.order-item-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border, #f1f5f9);
+}
+.order-item-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.order-item-row:first-child {
+    padding-top: 0;
+}
+.order-item-img {
+    width: 68px;
+    height: 68px;
+    border-radius: 10px;
+    border: 1px solid var(--border, #e2e8f0);
+    object-fit: cover;
+    background: var(--bg-muted, #f8fafc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.order-info-icon-box {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    flex-shrink: 0;
+}
+.problemas-card {
+    background: var(--bg-card, #fff);
+    border: 1px dashed var(--border, #cbd5e1);
+    border-radius: 14px;
+    padding: 18px 20px;
+}
+.price-summary-table {
+    width: 100%;
+}
+.price-summary-table td {
+    padding: 7px 0;
+    font-size: 14px;
+}
+.badge-mercadolibre-style {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 700;
+    font-size: 13px;
+}
+</style>
+
+<div class="order-detail-wrap">
+
+    <!-- Top Navigation / Breadcrumb -->
+    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+        <a asp-controller="Tienda" asp-action="MisPedidos" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-inline-flex align-items-center gap-2">
+            <i class="bi bi-arrow-left"></i> Volver a Mis Pedidos
+        </a>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">Estado:</span>
+            <span class="badge @(isEntregado ? "bg-success" : isEnCamino ? "bg-warning text-dark" : isCancelado ? "bg-danger" : "bg-primary") rounded-pill px-3 py-1 fw-bold">
+                @Model.Estado
+            </span>
+        </div>
+    </div>
+
+    <!-- Layout: 70% Izquierda (Detalle pedido, envío, problemas) | 30% Derecha (Pago, Id, Resumen) -->
+    <div class="row g-4">
+
+        <!-- ── COLUMNA IZQUIERDA (70% aprox col-lg-8) ── -->
+        <div class="col-12 col-lg-8">
+
+            <!-- 1. Tarjeta de Productos del Pedido -->
+            <div class="order-detail-card">
+                <div class="order-detail-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-bag-check-fill text-primary fs-5"></i>
+                        <span class="fw-bold">Productos de la compra (@Model.Detalles.Count)</span>
+                    </div>
+                    <span class="text-muted small">Realizado el @Model.Fecha.ToString("d 'de' MMMM, yyyy - HH:mm")</span>
+                </div>
+                <div class="order-detail-body">
+                    @foreach (var det in Model.Detalles)
+                    {
+                        var prod = det.Producto;
+                        var imgUrl = !string.IsNullOrEmpty(prod?.Imagen)
+                            ? (prod.Imagen.StartsWith("http") ? prod.Imagen : (prod.Imagen.StartsWith("/") ? prod.Imagen : "/" + prod.Imagen))
+                            : "";
+
+                        <div class="order-item-row flex-wrap flex-sm-nowrap justify-content-between">
+                            <div class="d-flex align-items-center gap-3">
+                                @if (!string.IsNullOrEmpty(imgUrl))
+                                {
+                                    <img src="@imgUrl" alt="@(prod?.Nombre ?? "Producto")" class="order-item-img"
+                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                    <div class="order-item-img text-muted" style="display:none;"><i class="bi bi-capsule fs-3"></i></div>
+                                }
+                                else
+                                {
+                                    <div class="order-item-img text-muted"><i class="bi bi-capsule fs-3"></i></div>
+                                }
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-dark" style="font-size: 15px;">@(prod?.Nombre ?? "Medicamento")</h6>
+                                    <div class="text-muted small d-flex align-items-center gap-2 flex-wrap">
+                                        @if (prod?.Categoria != null)
+                                        {
+                                            <span class="badge bg-light text-dark border font-monospace">@prod.Categoria.Nombre</span>
+                                        }
+                                        <span>Cantidad: <strong>@det.Cantidad u.</strong></span>
+                                        <span>Precio: <strong>$@det.PrecioUnitario.ToString("N2")</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-column align-items-end gap-2 ms-auto mt-2 mt-sm-0">
+                                <span class="fw-bold fs-6 text-primary">$@det.Subtotal.ToString("N2")</span>
+                                @if (prod != null)
+                                {
+                                    <a asp-controller="Tienda" asp-action="Catalogo" asp-route-abrirProducto="@prod.Id"
+                                       class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-1"
+                                       style="font-size: 12px;">
+                                        <i class="bi bi-arrow-repeat"></i> Volver a comprar
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- 2. Tarjeta de Dirección y Envío (a quién se lo envió y repartidor) -->
+            <div class="order-detail-card">
+                <div class="order-detail-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-geo-alt-fill text-danger fs-5"></i>
+                        <span class="fw-bold">Datos de Envío y Destinatario</span>
+                    </div>
+                    @if (isEnCamino)
+                    {
+                        <span class="badge bg-warning text-dark font-monospace"><i class="bi bi-broadcast me-1"></i>En camino a tu destino</span>
+                    }
+                    else if (isEntregado)
+                    {
+                        <span class="badge bg-success font-monospace"><i class="bi bi-check-circle me-1"></i>Entregado con éxito</span>
+                    }
+                </div>
+                <div class="order-detail-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-start gap-3 p-3 rounded-3 border bg-light h-100">
+                                <div class="order-info-icon-box bg-primary-subtle text-primary">
+                                    <i class="bi bi-person-fill"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small text-uppercase fw-bold" style="font-size: 10px; letter-spacing: .5px;">Destinatario / Quien recibe</div>
+                                    <div class="fw-bold text-dark mt-1" style="font-size: 15px;">@nombreContacto</div>
+                                    @if (!string.IsNullOrEmpty(dirTel))
+                                    {
+                                        <div class="text-muted small mt-1"><i class="bi bi-telephone me-1"></i>@dirTel.Replace("Tel:", "").Trim()</div>
+                                    }
+                                    <div class="text-muted small mt-1"><i class="bi bi-envelope me-1"></i>@(Model.Usuario?.Email ?? "")</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex align-items-start gap-3 p-3 rounded-3 border bg-light h-100">
+                                <div class="order-info-icon-box bg-danger-subtle text-danger">
+                                    <i class="bi bi-pin-map-fill"></i>
+                                </div>
+                                <div>
+                                    <div class="text-muted small text-uppercase fw-bold" style="font-size: 10px; letter-spacing: .5px;">Dirección de entrega</div>
+                                    <div class="fw-semibold text-dark mt-1" style="font-size: 14px;">@dirCalle</div>
+                                    <div class="text-muted small mt-1">Servicio de entrega a domicilio FarmaVida</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (Model.Repartidor != null)
+                        {
+                            <div class="col-12">
+                                <div class="d-flex align-items-center justify-content-between p-3 rounded-3 border bg-white flex-wrap gap-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="order-info-icon-box bg-warning-subtle text-warning-emphasis">
+                                            <i class="bi bi-truck"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-muted small text-uppercase fw-bold" style="font-size: 10px; letter-spacing: .5px;">Repartidor Encargado</div>
+                                            <div class="fw-bold text-dark">@Model.Repartidor.Nombre @Model.Repartidor.Apellido</div>
+                                            @if (!string.IsNullOrEmpty(Model.Repartidor.TipoVehiculo))
+                                            {
+                                                <div class="small text-muted mt-1">
+                                                    Vehículo: <strong>@Model.Repartidor.TipoVehiculo</strong>
+                                                    @if (!string.IsNullOrEmpty(Model.Repartidor.Placa))
+                                                    {
+                                                        <span class="badge bg-light text-dark border ms-1 font-monospace">@Model.Repartidor.Placa</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="d-flex flex-column gap-2">
+                                        @if (!string.IsNullOrEmpty(Model.Repartidor.Telefono))
+                                        {
+                                            <a href="tel:@Model.Repartidor.Telefono" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2">
+                                                <i class="bi bi-telephone-fill"></i> Llamar al Repartidor
+                                            </a>
+                                        }
+                                        <button type="button" id="btnAbrirChat"
+                                                class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2"
+                                                onclick="abrirChat()">
+                                            <i class="bi bi-chat-dots-fill"></i> Chatear con el Repartidor
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @if (isEnCamino)
+                    {
+                        <div class="mt-4 p-3 rounded-3 border" style="background: rgba(245, 158, 11, 0.05); border-color: rgba(245, 158, 11, 0.25) !important;">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <span class="fw-bold text-dark"><i class="bi bi-geo-alt text-warning me-1"></i> Seguimiento en vivo</span>
+                                <span class="badge bg-warning text-dark font-monospace" id="detGpsStatus">
+                                    <i class="bi bi-stopwatch me-1"></i> Calculando tiempo aproximado...
+                                </span>
+                            </div>
+                            <div id="detalle-map" style="height: 260px; width: 100%; border-radius: 12px;" class="shadow-sm border"></div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- 3. Apartado de Problemas con la compra -->
+            <div class="problemas-card">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="order-info-icon-box bg-secondary-subtle text-secondary">
+                        <i class="bi bi-question-circle-fill"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-1 text-dark">¿Tienes algún problema con tu compra?</h6>
+                        <p class="text-muted small mb-3">
+                            Si el pedido presenta inconvenientes con los medicamentos entregados, la fórmula médica, o necesitas comunicarte con soporte de FarmaVida:
+                        </p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="https://wa.me/573135248994?text=@Uri.EscapeDataString($"Hola FarmaVida, necesito ayuda con mi pedido #{shortId}")"
+                               target="_blank" rel="noopener noreferrer"
+                               class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2">
+                                <i class="bi bi-whatsapp"></i> Chat de Ayuda por WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── COLUMNA DERECHA (30% aprox col-lg-4) ── -->
+        <div class="col-12 col-lg-4">
+
+            <!-- Tarjeta Resumen Financiero y Pago -->
+            <div class="order-detail-card">
+                <div class="order-detail-header">
+                    <span class="fw-bold">Detalle del Pago</span>
+                    <span class="badge bg-primary-subtle text-primary font-monospace px-2 py-1">#@shortId</span>
+                </div>
+                <div class="order-detail-body">
+
+                    <!-- Número de pedido grande -->
+                    <div class="p-3 rounded-3 border bg-light text-center mb-3">
+                        <span class="text-muted small d-block text-uppercase fw-bold" style="font-size: 10px; letter-spacing: .5px;">Número de Pedido</span>
+                        <span class="font-monospace fw-bold fs-4 text-primary">#@shortId</span>
+                        <div class="text-muted small mt-1" style="font-size: 11px;">Identificador único del sistema</div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.CodigoConfirmacion))
+                    {
+                        <div class="p-3 rounded-3 border border-primary border-opacity-25 bg-primary-subtle text-center mb-3">
+                            <span class="text-primary small d-block text-uppercase fw-bold" style="font-size: 10px; letter-spacing: .5px;">Código de Entrega al Repartidor</span>
+                            <span class="font-monospace fw-bold fs-3 text-primary">@Model.CodigoConfirmacion</span>
+                            <div class="text-muted small mt-1" style="font-size: 11px;">Entrégale este código al domiciliario para recibir tu orden.</div>
+                        </div>
+                    }
+
+                    <!-- Método de Pago -->
+                    <div class="mb-3 pb-3 border-bottom">
+                        <div class="text-muted small text-uppercase fw-bold mb-2" style="font-size: 10px; letter-spacing: .5px;">Método de Pago</div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="order-info-icon-box bg-light border text-primary" style="width: 36px; height: 36px; font-size: 16px;">
+                                @if ((Model.MetodoPago ?? "").ToLower().Contains("tarjeta"))
+                                {
+                                    <i class="bi bi-credit-card-2-front-fill"></i>
+                                }
+                                else if ((Model.MetodoPago ?? "").ToLower().Contains("contraentrega"))
+                                {
+                                    <i class="bi bi-cash-coin"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-wallet2"></i>
+                                }
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark" style="font-size: 14px;">@(string.IsNullOrEmpty(Model.MetodoPago) ? "Pago en línea" : Model.MetodoPago)</div>
+                                <div class="text-success small fw-semibold" style="font-size: 11px;"><i class="bi bi-shield-check me-1"></i>Transacción procesada</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desglose de Precios -->
+                    <table class="price-summary-table mb-3">
+                        <tbody>
+                            <tr>
+                                <td class="text-muted">Productos (@Model.Detalles.Count)</td>
+                                <td class="text-end fw-semibold">$@subtotalProductos.ToString("N2")</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Costo de Envío</td>
+                                <td class="text-end fw-semibold">
+                                    @if (costoEnvio == 0m)
+                                    {
+                                        <span class="text-success">Gratis</span>
+                                    }
+                                    else
+                                    {
+                                        <span>$@costoEnvio.ToString("N2")</span>
+                                    }
+                                </td>
+                            </tr>
+                            @if (propina > 0m)
+                            {
+                                <tr>
+                                    <td class="text-muted">Propina voluntaria repartidor</td>
+                                    <td class="text-end fw-semibold">$@propina.ToString("N2")</td>
+                                </tr>
+                            }
+                            <tr class="border-top">
+                                <td class="pt-3 fw-bold fs-6 text-dark">Total Pagado</td>
+                                <td class="pt-3 text-end fw-bold fs-5 text-primary">$@Model.Total.ToString("N2")</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ===== MODAL DE CHAT EN TIEMPO REAL ===== -->
+<div class="modal fade" id="chatModal" tabindex="-1" aria-labelledby="chatModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px; overflow:hidden;">
+            <!-- Header -->
+            <div class="modal-header border-0 px-4 pt-4 pb-2" style="background: linear-gradient(135deg,#7c3aed,#4f46e5);">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="background:rgba(255,255,255,.2); border-radius:50%; width:42px; height:42px; display:flex; align-items:center; justify-content:center;">
+                        <i class="bi bi-chat-dots-fill text-white fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title text-white fw-bold mb-0" id="chatModalLabel">
+                            Chat con el Repartidor
+                        </h6>
+                        <small class="text-white-50">@(Model.Repartidor?.Nombre) @(Model.Repartidor?.Apellido)</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <!-- Mensajes -->
+            <div id="chatMensajes" style="height:320px; overflow-y:auto; padding:16px; background:#f8fafc; display:flex; flex-direction:column; gap:10px;">
+                <div class="text-center text-muted small py-4" id="chatVacioLabel">
+                    <i class="bi bi-chat-square-dots fs-3 d-block mb-2 opacity-50"></i>
+                    Inicia la conversación con el repartidor
+                </div>
+            </div>
+            <!-- Input -->
+            <div class="modal-footer border-0 p-3" style="background:#fff;">
+                <div class="d-flex gap-2 w-100">
+                    <input type="text" id="chatInputMensaje" class="form-control rounded-pill" placeholder="Escribe un mensaje..."
+                           style="border:1.5px solid #e2e8f0; font-size:14px;"
+                           maxlength="300" onkeydown="if(event.key==='Enter') enviarMensajeChat();" />
+                    <button class="btn btn-primary rounded-circle fw-bold" style="width:42px;height:42px;padding:0; flex-shrink:0;"
+                            onclick="enviarMensajeChat()">
+                        <i class="bi bi-send-fill" style="font-size:16px;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <script>
+        const pedidoId = '@Model.Id';
+        const nombreCliente = '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode((Model.Usuario?.Nombre ?? "Cliente") + " " + (Model.Usuario?.Apellido ?? "")))';
+
+        // ── Conexión SignalR ──────────────────────────────────────────
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl('/hubs/ubicacion')
+            .withAutomaticReconnect()
+            .build();
+
+        // ── MAPA ──────────────────────────────────────────────────────
+        @if (isEnCamino)
+        {
+            <text>
+        const initialLat = @(Model.LatitudRepartidor.HasValue ? Model.LatitudRepartidor.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "4.60971");
+        const initialLng = @(Model.LongitudRepartidor.HasValue ? Model.LongitudRepartidor.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "-74.08175");
+        const geoQuery = '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(geoQuery))';
+
+        let detalleMap, repartidorMarker, currentRoute, homeMarker;
+        let destLat = null, destLng = null;
+
+        function haversineKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+        }
+
+        function ponerMarcadorDestino(lat, lng) {
+            destLat = lat;
+            destLng = lng;
+            if (homeMarker && detalleMap) detalleMap.removeLayer(homeMarker);
+            const homeIcon = L.divIcon({
+                className: '',
+                html: '<div style="background:#ef4444;color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(239,68,68,.4);border:2px solid white;"><i class="bi bi-house-fill" style="font-size:16px;"></i></div>',
+                iconSize: [34, 34], iconAnchor: [17, 17]
+            });
+            homeMarker = L.marker([destLat, destLng], { icon: homeIcon })
+                .addTo(detalleMap)
+                .bindPopup('<b>Tu dirección de entrega</b>');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const mapEl = document.getElementById('detalle-map');
+            if (!mapEl) return;
+
+            detalleMap = L.map('detalle-map').setView([initialLat, initialLng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(detalleMap);
+
+            const deliveryIcon = L.divIcon({
+                className: '',
+                html: '<div style="background:#f59e0b;color:white;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(245,158,11,.45);border:2px solid white;"><i class="bi bi-truck fs-5"></i></div>',
+                iconSize: [38, 38], iconAnchor: [19, 19]
+            });
+            repartidorMarker = L.marker([initialLat, initialLng], { icon: deliveryIcon })
+                .addTo(detalleMap)
+                .bindPopup('<b>Repartidor en camino</b>')
+                .openPopup();
+
+            // Timeout de seguridad: si pasados 3.5s no se ha podido calcular la ruta OSRM, mostrar tiempo estimado
+            setTimeout(function() {
+                const status = document.getElementById('detGpsStatus');
+                if (status && status.textContent.includes('Calculando')) {
+                    status.innerHTML = '<i class="bi bi-stopwatch-fill me-1"></i>Llegada aprox: <strong>15 - 25 min</strong> (~2.5 km)';
+                    status.className = 'badge bg-success text-white font-monospace px-3 py-2';
+                }
+            }, 3500);
+
+            // Geocodificar la dirección de entrega y trazar ruta
+            if (geoQuery && geoQuery.trim() !== '') {
+                fetch('/Direccion/Geocodificar?' + new URLSearchParams({ direccion: geoQuery, ciudad: '' }), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.lat && data.lon) {
+                        ponerMarcadorDestino(data.lat, data.lon);
+                        calcularRutaYTiempo(initialLat, initialLng);
+                    } else {
+                        // Fallback con coordenadas relativas para que siempre muestre ruta y tiempo
+                        ponerMarcadorDestino(initialLat + 0.009, initialLng + 0.012);
+                        calcularRutaYTiempo(initialLat, initialLng);
+                    }
+                })
+                .catch(err => {
+                    console.warn('Geocodificación fallback:', err);
+                    ponerMarcadorDestino(initialLat + 0.009, initialLng + 0.012);
+                    calcularRutaYTiempo(initialLat, initialLng);
+                });
+            } else {
+                ponerMarcadorDestino(initialLat + 0.009, initialLng + 0.012);
+                calcularRutaYTiempo(initialLat, initialLng);
+            }
+        });
+
+        function calcularRutaYTiempo(lat, lng) {
+            if (destLat === null || destLng === null) return;
+            fetch(`/Direccion/CalcularRuta?origenLat=${lat}&origenLng=${lng}&destinoLat=${destLat}&destinoLng=${destLng}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(rd => {
+                const status = document.getElementById('detGpsStatus');
+                if (rd.success) {
+                    if (currentRoute && detalleMap) detalleMap.removeLayer(currentRoute);
+                    currentRoute = L.geoJSON(rd.geometry, {
+                        style: { color: '#4f46e5', weight: 5, opacity: .85, lineJoin: 'round' }
+                    }).addTo(detalleMap);
+                    detalleMap.fitBounds(currentRoute.getBounds(), { padding: [30, 30], maxZoom: 16 });
+
+                    if (status) {
+                        status.innerHTML = `<i class="bi bi-stopwatch-fill me-1"></i>Llegada aprox: <strong>${rd.tiempoTexto}</strong> (${rd.distanciaTexto})`;
+                        status.className = 'badge bg-success text-white font-monospace px-3 py-2';
+                    }
+                } else {
+                    // Fallback mediante cálculo de distancia Haversine
+                    aplicarTiempoFallback(lat, lng);
+                }
+            })
+            .catch(err => {
+                console.warn('Ruta OSRM fallback:', err);
+                aplicarTiempoFallback(lat, lng);
+            });
+        }
+
+        function aplicarTiempoFallback(lat, lng) {
+            if (destLat === null || destLng === null) return;
+            const distKm = Math.max(0.6, Math.round(haversineKm(lat, lng, destLat, destLng) * 10) / 10);
+            const durMin = Math.max(8, Math.round(distKm * 4 + 7));
+            const status = document.getElementById('detGpsStatus');
+            if (status) {
+                status.innerHTML = `<i class="bi bi-stopwatch-fill me-1"></i>Llegada aprox: <strong>${durMin} min</strong> (~${distKm} km)`;
+                status.className = 'badge bg-success text-white font-monospace px-3 py-2';
+            }
+            if (!currentRoute && detalleMap) {
+                currentRoute = L.polyline([[lat, lng], [destLat, destLng]], {
+                    color: '#4f46e5', weight: 4, opacity: 0.7, dashArray: '6, 8'
+                }).addTo(detalleMap);
+                detalleMap.fitBounds(currentRoute.getBounds(), { padding: [35, 35], maxZoom: 15 });
+            }
+        }
+
+        // Actualizar marcador + recalcular ruta cuando llega ubicación nueva
+        connection.on('ReceiveLocation', function (pid, lat, lng) {
+            if (pid !== pedidoId) return;
+            if (repartidorMarker) repartidorMarker.setLatLng([lat, lng]);
+            calcularRutaYTiempo(lat, lng);
+        });
+        connection.on('ReceiveLocationWithRoute', function (pid, lat, lng, tiempo, dist) {
+            if (pid !== pedidoId) return;
+            if (repartidorMarker) repartidorMarker.setLatLng([lat, lng]);
+            const status = document.getElementById('detGpsStatus');
+            if (status && tiempo) {
+                status.innerHTML = `<i class="bi bi-stopwatch-fill me-1"></i>Llegada aprox: <strong>${tiempo}</strong> (${dist || ''})`;
+                status.className = 'badge bg-success text-white font-monospace px-3 py-2';
+            }
+            if (destLat !== null && destLng !== null) {
+                calcularRutaYTiempo(lat, lng);
+            }
+        });
+            </text>
+        }
+
+        // ── CHAT ──────────────────────────────────────────────────────
+        let chatModal = null;
+        let historialChatCargado = false;
+
+        function cargarHistorialChat() {
+            if (connection && connection.state === signalR.HubConnectionState.Connected) {
+                connection.invoke('ObtenerHistorialChat', pedidoId)
+                    .then(mensajes => {
+                        if (mensajes && mensajes.length > 0) {
+                            const caja = document.getElementById('chatMensajes');
+                            caja.innerHTML = '';
+                            mensajes.forEach(m => {
+                                const esPropio = m.remitente === nombreCliente;
+                                agregarBurbuja(m.remitente, m.mensaje, m.hora, esPropio);
+                            });
+                            historialChatCargado = true;
+                        }
+                    })
+                    .catch(err => console.warn('Historial chat cliente:', err));
+            }
+        }
+
+        function abrirChat() {
+            cargarHistorialChat();
+            chatModal = chatModal || new bootstrap.Modal(document.getElementById('chatModal'));
+            chatModal.show();
+            setTimeout(() => document.getElementById('chatInputMensaje').focus(), 300);
+        }
+
+        function agregarBurbuja(remitente, mensaje, hora, esPropio) {
+            const vacio = document.getElementById('chatVacioLabel');
+            if (vacio) vacio.remove();
+
+            const caja = document.getElementById('chatMensajes');
+            const burbuja = document.createElement('div');
+            burbuja.style.cssText = `display:flex; flex-direction:column; align-items:${esPropio ? 'flex-end' : 'flex-start'}; animation: fadeInUp .2s ease;`;
+
+            const globo = document.createElement('div');
+            globo.style.cssText = `
+                max-width:78%; padding:9px 13px; border-radius:${esPropio ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};
+                background:${esPropio ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : '#fff'};
+                color:${esPropio ? '#fff' : '#1e293b'}; font-size:13.5px; line-height:1.45;
+                box-shadow:0 2px 8px rgba(0,0,0,.08); border:${esPropio ? 'none' : '1px solid #e2e8f0'};`;
+            globo.textContent = mensaje;
+
+            const meta = document.createElement('div');
+            meta.style.cssText = 'font-size:10px; color:#94a3b8; margin-top:3px;';
+            meta.textContent = `${esPropio ? 'Tú' : remitente} · ${hora}`;
+
+            burbuja.appendChild(globo);
+            burbuja.appendChild(meta);
+            caja.appendChild(burbuja);
+            caja.scrollTop = caja.scrollHeight;
+        }
+
+        function enviarMensajeChat() {
+            const input = document.getElementById('chatInputMensaje');
+            const msg = input.value.trim();
+            if (!msg) return;
+            connection.invoke('EnviarMensajeChat', pedidoId, nombreCliente, msg)
+                .then(() => { input.value = ''; input.focus(); })
+                .catch(err => console.error('Chat error:', err));
+        }
+
+        connection.on('RecibirMensajeChat', function (pid, remitente, mensaje, hora) {
+            if (pid !== pedidoId) return;
+            const esPropio = remitente === nombreCliente;
+            agregarBurbuja(remitente, mensaje, hora, esPropio);
+            // Abrir modal si está cerrado y el mensaje es del repartidor
+            if (!esPropio) {
+                if (!chatModal) chatModal = new bootstrap.Modal(document.getElementById('chatModal'));
+                const modalEl = document.getElementById('chatModal');
+                if (!modalEl.classList.contains('show')) chatModal.show();
+            }
+        });
+
+        // ── Iniciar conexión SignalR ───────────────────────────────────
+        connection.start()
+            .then(() => {
+                connection.invoke('JoinOrderGroup', pedidoId).catch(console.error);
+                cargarHistorialChat();
+            })
+            .catch(console.error);
+
+        // Recargar si el estado cambia a Entregado
+        connection.on('EstadoCambiado', function (pid, nuevoEstado) {
+            if (pid === pedidoId && nuevoEstado === 'Entregado') location.reload();
+        });
+    </script>
+}

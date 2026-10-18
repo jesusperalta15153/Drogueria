@@ -1,0 +1,499 @@
+@model Drogueria.Models.Usuario
+@{
+    Layout = "~/Views/Shared/_LayoutCliente.cshtml";
+    ViewData["Title"] = "Mi Perfil";
+    ViewData["ActiveNav"] = "perfil";
+
+    var esRepartidor = Model.Rol == "Repartidor";
+    var esCliente = Model.Rol == "Cliente";
+    var initials = !string.IsNullOrEmpty(Model.Nombre) && Model.Nombre.Length >= 2
+        ? Model.Nombre.Substring(0, 2).ToUpper()
+        : "US";
+}
+
+<style>
+.perfil-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+}
+.perfil-header-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.04);
+}
+.perfil-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), #8b5cf6);
+    color: #fff;
+    font-size: 26px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(124,58,237,.3);
+    flex-shrink: 0;
+}
+.perfil-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.04);
+    margin-bottom: 24px;
+}
+.perfil-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--t-base);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+.vehicle-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.vehicle-card-label {
+    cursor: pointer;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+    transition: all .2s ease;
+    background: var(--bg-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.vehicle-card-label i, .vehicle-card-label svg {
+    font-size: 24px;
+    color: var(--t-muted);
+    transition: color .2s, fill .2s;
+    fill: currentColor;
+}
+.vehicle-card-label span {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--t-base);
+}
+.vehicle-card-input {
+    display: none;
+}
+.vehicle-card-input:checked + .vehicle-card-label {
+    border-color: #f59e0b;
+    background: rgba(245,158,11,.1);
+    box-shadow: 0 4px 14px rgba(245,158,11,.2);
+}
+.vehicle-card-input:checked + .vehicle-card-label i,
+.vehicle-card-input:checked + .vehicle-card-label svg {
+    color: #d97706;
+    fill: #d97706;
+}
+.vehicle-card-input:checked + .vehicle-card-label span {
+    color: #d97706;
+}
+.kpi-mini-card {
+    background: var(--bg-muted);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.kpi-mini-card i {
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.kpi-mini-val { font-size: 20px; font-weight: 700; color: var(--t-base); line-height: 1.1; }
+.kpi-mini-lbl { font-size: 11px; text-transform: uppercase; color: var(--t-muted); font-weight: 600; }
+</style>
+
+<div class="perfil-container">
+
+    <!-- Alertas Flash -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 border-0 shadow-sm rounded-4 mb-4" role="alert">
+            <i class="bi bi-check-circle-fill fs-5"></i>
+            <div>@TempData["Success"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 border-0 shadow-sm rounded-4 mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>@TempData["Error"]</div>
+            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Header del Perfil -->
+    <div class="perfil-header-card d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="perfil-avatar">@initials</div>
+            <div>
+                <h2 class="fw-bold mb-1" style="font-size: clamp(1.2rem, 3vw, 1.6rem);">@Model.Nombre @Model.Apellido</h2>
+                <div class="text-muted small mb-2"><i class="bi bi-envelope me-1"></i>@Model.Email</div>
+                <div>
+                    @if (esRepartidor)
+                    {
+                        <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold">
+                            <i class="bi bi-truck me-1"></i> Repartidor Oficial
+                        </span>
+                        @if (!string.IsNullOrEmpty(Model.TipoVehiculo))
+                        {
+                            <span class="badge bg-light text-dark border px-3 py-1 rounded-pill ms-1 font-monospace">
+                                @if (Model.TipoVehiculo == "Moto")
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24" class="me-1 d-inline-block align-text-bottom"><path d="M19.44 13c-.22 0-.45.07-.67.12l-.9-2.73A3.99 3.99 0 0 0 14.07 7.5H12V6h2a1 1 0 1 0 0-2h-3a1 1 0 0 0-1 1v2.5H7.83a4 4 0 0 0-3.8 2.89L3.2 13.12c-.22-.05-.45-.12-.67-.12a3.5 3.5 0 1 0 3.44 4.14c.34-.09.68-.21 1-.36l.93.93a1 1 0 0 0 1.41-1.41l-.9-.9c.47-.38.86-.85 1.14-1.4h4.88c.28.55.67 1.02 1.14 1.4l-.9.9a1 1 0 0 0 1.41 1.41l.93-.93c.32.15.66.27 1 .36A3.5 3.5 0 1 0 19.44 13zm-15.94 3.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm1.94-3.5.76-2.31A2 2 0 0 1 8 9.5h1.56l.89 3.5H5.44zm14 3.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm-2.88-3.5.89-3.5H14a2 2 0 0 1 1.9 1.19l.76 2.31h-4.1z"/></svg>
+                                }
+                                else if (Model.TipoVehiculo == "Bicicleta")
+                                {
+                                    <i class="bi bi-bicycle me-1"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-car-front-fill me-1"></i>
+                                }
+                                @Model.TipoVehiculo @(!string.IsNullOrEmpty(Model.Placa) ? $"[{Model.Placa}]" : "")
+                            </span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="badge bg-primary px-3 py-1 rounded-pill fw-bold">
+                            <i class="bi bi-person-fill me-1"></i> Cliente Registrado
+                        </span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            @if (esRepartidor)
+            {
+                <a asp-controller="Repartidor" asp-action="MisDomicilios" class="btn btn-outline-warning rounded-pill px-4 fw-semibold btn-sm">
+                    <i class="bi bi-truck me-1"></i> Ir a Mis Domicilios
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Tienda" asp-action="MisPedidos" class="btn btn-outline-primary rounded-pill px-4 fw-semibold btn-sm">
+                    <i class="bi bi-bag-check me-1"></i> Mis Pedidos
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- KPIs Rápidos -->
+    @if (esRepartidor)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="kpi-mini-card">
+                    <i class="bi bi-check2-circle bg-success-subtle text-success"></i>
+                    <div>
+                        <div class="kpi-mini-val">@(ViewBag.TotalEntregados ?? 0)</div>
+                        <div class="kpi-mini-lbl">Entregas Exitosas</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-mini-card">
+                    <i class="bi bi-clock-history bg-warning-subtle text-warning"></i>
+                    <div>
+                        <div class="kpi-mini-val">@(ViewBag.TotalActivos ?? 0)</div>
+                        <div class="kpi-mini-lbl">Domicilios Activos</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-mini-card">
+                    <i class="bi bi-speedometer2 bg-info-subtle text-info"></i>
+                    <div>
+                        <div class="kpi-mini-val" style="font-size:15px; font-weight:700;">@(string.IsNullOrEmpty(Model.TipoVehiculo) ? "Sin asignar" : Model.TipoVehiculo)</div>
+                        <div class="kpi-mini-lbl">Vehículo</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-mini-card">
+                    <i class="bi bi-card-text bg-primary-subtle text-primary"></i>
+                    <div>
+                        <div class="kpi-mini-val font-monospace" style="font-size:16px;">@(string.IsNullOrEmpty(Model.Placa) ? "N/A" : Model.Placa)</div>
+                        <div class="kpi-mini-lbl">Placa</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (esCliente)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-4">
+                <div class="kpi-mini-card">
+                    <i class="bi bi-bag-check bg-primary-subtle text-primary"></i>
+                    <div>
+                        <div class="kpi-mini-val">@(ViewBag.TotalPedidos ?? 0)</div>
+                        <div class="kpi-mini-lbl">Pedidos Realizados</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4">
+                <div class="kpi-mini-card">
+                    <i class="bi bi-geo-alt bg-danger-subtle text-danger"></i>
+                    <div>
+                        <div class="kpi-mini-val">@((ViewBag.Direcciones as IEnumerable<Drogueria.Models.DireccionUsuario>)?.Count() ?? 0)</div>
+                        <div class="kpi-mini-lbl">Direcciones Guardadas</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="kpi-mini-card">
+                    <i class="bi bi-shield-check bg-success-subtle text-success"></i>
+                    <div>
+                        <div class="kpi-mini-val" style="font-size:16px;">Activa</div>
+                        <div class="kpi-mini-lbl">Cuenta Verificada</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Columna Izquierda: Datos Personales (y Vehículo si es Repartidor) -->
+        <div class="col-12 col-lg-7">
+            <div class="perfil-card">
+                <div class="perfil-card-title">
+                    <i class="bi bi-person-lines-fill text-primary"></i>
+                    <span>Información Personal</span>
+                </div>
+
+                <form asp-controller="Account" asp-action="ActualizarPerfil" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-semibold text-muted">Nombre</label>
+                            <input type="text" name="nombre" class="form-control rounded-3" value="@Model.Nombre" required maxlength="100" />
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small fw-semibold text-muted">Apellido</label>
+                            <input type="text" name="apellido" class="form-control rounded-3" value="@Model.Apellido" required maxlength="100" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-sm-7">
+                            <label class="form-label small fw-semibold text-muted">Correo Electrónico</label>
+                            <input type="email" name="email" class="form-control rounded-3" value="@Model.Email" required maxlength="150" />
+                        </div>
+                        <div class="col-12 col-sm-5">
+                            <label class="form-label small fw-semibold text-muted">Teléfono de Contacto</label>
+                            <input type="tel" name="telefono" class="form-control rounded-3" value="@Model.Telefono" placeholder="Ej: 300 123 4567" maxlength="20" />
+                        </div>
+                    </div>
+
+                    @if (esRepartidor)
+                    {
+                        <!-- ── ESPECIFICACIÓN DE VEHÍCULO PARA EL REPARTIDOR ── -->
+                        <div class="pt-3 mt-3 border-top">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="form-label small fw-bold text-dark mb-0">
+                                    <i class="bi bi-bicycle text-warning me-1"></i> Tipo de Vehículo para Domicilios
+                                </label>
+                                <span class="badge bg-warning-subtle text-warning-emphasis small">Obligatorio</span>
+                            </div>
+                            <p class="text-muted" style="font-size:12px;">Selecciona el medio de transporte que utilizas para llevar los pedidos a los clientes.</p>
+
+                            <div class="vehicle-selector">
+                                <input type="radio" class="vehicle-card-input" name="tipoVehiculo" id="vehiculoMoto" value="Moto"
+                                       @(string.IsNullOrEmpty(Model.TipoVehiculo) || Model.TipoVehiculo == "Moto" ? "checked" : "") onchange="actualizarRequisitoPlaca()" />
+                                <label class="vehicle-card-label" for="vehiculoMoto">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 24 24" class="vehicle-svg-icon"><path d="M19.44 13c-.22 0-.45.07-.67.12l-.9-2.73A3.99 3.99 0 0 0 14.07 7.5H12V6h2a1 1 0 1 0 0-2h-3a1 1 0 0 0-1 1v2.5H7.83a4 4 0 0 0-3.8 2.89L3.2 13.12c-.22-.05-.45-.12-.67-.12a3.5 3.5 0 1 0 3.44 4.14c.34-.09.68-.21 1-.36l.93.93a1 1 0 0 0 1.41-1.41l-.9-.9c.47-.38.86-.85 1.14-1.4h4.88c.28.55.67 1.02 1.14 1.4l-.9.9a1 1 0 0 0 1.41 1.41l.93-.93c.32.15.66.27 1 .36A3.5 3.5 0 1 0 19.44 13zm-15.94 3.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm1.94-3.5.76-2.31A2 2 0 0 1 8 9.5h1.56l.89 3.5H5.44zm14 3.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm-2.88-3.5.89-3.5H14a2 2 0 0 1 1.9 1.19l.76 2.31h-4.1z"/></svg>
+                                    <span>Moto</span>
+                                </label>
+
+                                <input type="radio" class="vehicle-card-input" name="tipoVehiculo" id="vehiculoBici" value="Bicicleta"
+                                       @(Model.TipoVehiculo == "Bicicleta" ? "checked" : "") onchange="actualizarRequisitoPlaca()" />
+                                <label class="vehicle-card-label" for="vehiculoBici">
+                                    <i class="bi bi-bicycle"></i>
+                                    <span>Bicicleta</span>
+                                </label>
+
+                                <input type="radio" class="vehicle-card-input" name="tipoVehiculo" id="vehiculoCarro" value="Carro"
+                                       @(Model.TipoVehiculo == "Carro" ? "checked" : "") onchange="actualizarRequisitoPlaca()" />
+                                <label class="vehicle-card-label" for="vehiculoCarro">
+                                    <i class="bi bi-car-front-fill"></i>
+                                    <span>Carro</span>
+                                </label>
+                            </div>
+
+                            <!-- Campo Placa (dinámico según el vehículo seleccionado) -->
+                            <div id="placaContainer" class="p-3 rounded-3 border" style="background: var(--bg-muted);">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label class="form-label small fw-semibold text-dark mb-0">
+                                        <i class="bi bi-card-heading me-1 text-primary"></i> Placa del Vehículo
+                                    </label>
+                                    <span id="placaBadgeRequerida" class="badge bg-danger-subtle text-danger small">Requerida para Moto/Carro</span>
+                                </div>
+                                <input type="text" id="placaInput" name="placa" class="form-control rounded-3 font-monospace fw-bold text-uppercase mt-2"
+                                       value="@Model.Placa" placeholder="Ej: ABC-123" maxlength="20" style="letter-spacing: 0.1em;" />
+                                <small id="placaHelpText" class="text-muted d-block mt-1" style="font-size:11px;">
+                                    Ingresa la placa del vehículo para que el cliente pueda identificarte con seguridad.
+                                </small>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mt-4 pt-2 text-end">
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                            <i class="bi bi-save me-1"></i> Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Seguridad (Contraseña) y Direcciones -->
+        <div class="col-12 col-lg-5">
+            <!-- Tarjeta Cambio de Contraseña -->
+            <div class="perfil-card">
+                <div class="perfil-card-title">
+                    <i class="bi bi-shield-lock-fill text-danger"></i>
+                    <span>Seguridad y Contraseña</span>
+                </div>
+
+                <form asp-controller="Account" asp-action="CambiarPassword" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Contraseña Actual</label>
+                        <input type="password" name="actualPassword" class="form-control rounded-3" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Nueva Contraseña</label>
+                        <input type="password" name="nuevaPassword" class="form-control rounded-3" minlength="6" required />
+                        <small class="text-muted" style="font-size:11px;">Mínimo 6 caracteres.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-muted">Confirmar Nueva Contraseña</label>
+                        <input type="password" name="confirmarPassword" class="form-control rounded-3" minlength="6" required />
+                    </div>
+
+                    <div class="mt-4 text-end">
+                        <button type="submit" class="btn btn-outline-danger rounded-pill px-4 fw-semibold btn-sm">
+                            <i class="bi bi-key me-1"></i> Actualizar Contraseña
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Si es Cliente: Direcciones de entrega guardadas -->
+            @if (esCliente)
+            {
+                var direcciones = ViewBag.Direcciones as IEnumerable<Drogueria.Models.DireccionUsuario> ?? Enumerable.Empty<Drogueria.Models.DireccionUsuario>();
+                <div class="perfil-card">
+                    <div class="perfil-card-title d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-geo-alt-fill text-danger"></i>
+                            <span>Mis Direcciones Guardadas</span>
+                        </div>
+                        <a asp-controller="Tienda" asp-action="Carrito" class="btn btn-sm btn-outline-primary rounded-pill" style="font-size:11px;">
+                            <i class="bi bi-plus-lg me-1"></i> Gestionar
+                        </a>
+                    </div>
+
+                    @if (!direcciones.Any())
+                    {
+                        <div class="text-center py-4 text-muted small">
+                            <i class="bi bi-geo fs-3 d-block mb-2 opacity-50"></i>
+                            <span>No tienes direcciones registradas aún. Al realizar tu primera compra podrás guardarla.</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-2">
+                            @foreach (var dir in direcciones)
+                            {
+                                <div class="p-3 rounded-3 border bg-light d-flex align-items-start justify-content-between gap-2" style="font-size:13px;">
+                                    <div>
+                                        <div class="fw-bold d-flex align-items-center gap-2">
+                                            @dir.NombreContacto
+                                            @if (dir.EsPredeterminada)
+                                            {
+                                                <span class="badge bg-success-subtle text-success" style="font-size:10px;">Predeterminada</span>
+                                            }
+                                        </div>
+                                        <div class="text-muted">@dir.Direccion, @dir.Ciudad, @dir.Departamento</div>
+                                        <div class="text-muted small"><i class="bi bi-telephone me-1"></i>@dir.Telefono</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+function actualizarRequisitoPlaca() {
+    const selector = document.querySelector('input[name="tipoVehiculo"]:checked');
+    if (!selector) return;
+
+    const val = selector.value;
+    const placaContainer = document.getElementById('placaContainer');
+    const placaInput = document.getElementById('placaInput');
+    const placaBadge = document.getElementById('placaBadgeRequerida');
+    const placaHelp = document.getElementById('placaHelpText');
+
+    if (!placaInput || !placaBadge || !placaHelp) return;
+
+    if (val === 'Moto' || val === 'Carro') {
+        placaInput.required = true;
+        placaInput.disabled = false;
+        placaBadge.className = 'badge bg-danger-subtle text-danger small';
+        placaBadge.textContent = 'Obligatoria para ' + val;
+        placaHelp.textContent = 'Ingresa la placa del vehículo (ej: ABC-123) para que el cliente te identifique.';
+        if (placaContainer) placaContainer.style.opacity = '1';
+    } else {
+        // Bicicleta
+        placaInput.required = false;
+        placaInput.value = '';
+        placaInput.disabled = true;
+        placaBadge.className = 'badge bg-secondary-subtle text-secondary small';
+        placaBadge.textContent = 'No aplica';
+        placaHelp.textContent = `Las entregas en ${val} no requieren placa de vehículo.`;
+        if (placaContainer) placaContainer.style.opacity = '0.65';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarRequisitoPlaca();
+});
+</script>
+}

@@ -1,0 +1,873 @@
+@model IEnumerable<Drogueria.Models.Usuario>
+
+@{
+    ViewData["Title"] = "Usuarios";
+    ViewData["ActiveNav"] = "usuarios";
+    Layout = "~/Views/Shared/_Topbar.cshtml";
+
+    var lista = Model ?? Enumerable.Empty<Drogueria.Models.Usuario>();
+    var total = lista.Count();
+    var activos = lista.Count(u => u.Estado);
+    var admins = lista.Count(u => string.Equals(u.Rol, "Administrador", StringComparison.OrdinalIgnoreCase));
+    var empleados = lista.Count(u => string.Equals(u.Rol, "Empleado", StringComparison.OrdinalIgnoreCase));
+    var repartidores = lista.Count(u => string.Equals(u.Rol, "Repartidor", StringComparison.OrdinalIgnoreCase));
+    var clientes = lista.Count(u => string.Equals(u.Rol, "Cliente", StringComparison.OrdinalIgnoreCase));
+}
+
+
+@* ================= ALERTA DE MENSAJES ================= *@
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="background: var(--success-soft); color: var(--success); border-radius: 12px;">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>¡Éxito!</strong> @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="background: var(--danger-soft); color: var(--danger); border-radius: 12px;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>Atención:</strong> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@* ================= SECCIÓN HERO ================= *@
+<section class="hero">
+    <div class="hero-text">
+        <span class="eyebrow" id="heroDate">
+            <i class="bi bi-calendar3"></i> Panel de Usuarios
+        </span>
+        <h1 class="hero-title">Gestión de <span class="accent">Usuarios</span></h1>
+        <p class="hero-sub">
+            Crea y administra cuentas con roles de <strong>Administrador</strong>, <strong>Empleado</strong> y <strong>Cliente</strong>.
+            Actualmente hay <strong>@activos cuentas activas</strong> en el sistema.
+        </p>
+    </div>
+    <div class="hero-action">
+        <button class="btn btn--primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14" />
+            </svg>
+            Nuevo usuario
+        </button>
+    </div>
+</section>
+
+@* ================= TARJETAS KPI ================= *@
+<section class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon k-purple">
+            <i class="bi bi-people-fill"></i>
+        </div>
+        <div class="kpi-data">
+            <span class="kpi-val">@total</span>
+            <span class="kpi-lbl">Total (@activos Activos)</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon k-primary">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+        <div class="kpi-data">
+            <span class="kpi-val">@admins</span>
+            <span class="kpi-lbl">Administradores</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon k-success">
+            <i class="bi bi-person-badge-fill"></i>
+        </div>
+        <div class="kpi-data">
+            <span class="kpi-val">@empleados</span>
+            <span class="kpi-lbl">Empleados</span>
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-icon k-orange">
+            <i class="bi bi-bag-heart-fill"></i>
+        </div>
+        <div class="kpi-data">
+            <span class="kpi-val">@clientes</span>
+            <span class="kpi-lbl">Clientes</span>
+        </div>
+    </div>
+</section>
+
+@* ================= TABLA PRINCIPAL DE USUARIOS ================= *@
+<div class="card">
+    <div class="card-head">
+        <div class="card-title-wrap">
+            <span class="eyebrow">Directorio</span>
+            <h2 class="card-title">Listado de Usuarios Registrados</h2>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <!-- Buscador en tiempo real -->
+            <div class="ui-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                </svg>
+                <input type="text" id="filtroUsuarios" placeholder="Buscar por nombre, correo o rol..." autocomplete="off" maxlength="100" />
+            </div>
+
+            <!-- Filtro por Rol -->
+            <select id="filtroRol" class="ui-select">
+                <option value="">Todos los roles</option>
+                <option value="administrador">Administrador</option>
+                <option value="empleado">Empleado</option>
+                <option value="repartidor">Repartidor</option>
+                <option value="cliente">Cliente</option>
+            </select>
+
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-scroll">
+        <table class="table table-adminator" id="tablaUsuarios">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Rol en Sistema</th>
+                    <th>Estado</th>
+                    <th style="text-align: right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (lista.Any())
+                {
+                    @foreach (var user in lista)
+                    {
+                        var iniciales = "US";
+                        if (!string.IsNullOrWhiteSpace(user.Nombre))
+                        {
+                            iniciales = user.Nombre.Substring(0, 1).ToUpper();
+                            if (!string.IsNullOrWhiteSpace(user.Apellido))
+                            {
+                                iniciales += user.Apellido.Substring(0, 1).ToUpper();
+                            }
+                        }
+
+                        var avatarColor = "u-primary";
+                        var rolLower = user.Rol?.ToLower() ?? "";
+                        if (rolLower.Contains("admin")) { avatarColor = "u-purple"; }
+                        else if (rolLower.Contains("repartidor")) { avatarColor = "u-orange"; }
+                        else if (rolLower.Contains("empleado")) { avatarColor = "u-teal"; }
+                        else if (rolLower.Contains("cliente")) { avatarColor = "u-primary"; }
+
+                        <tr class="fila-usuario" data-rol="@rolLower">
+                            <!-- Nombre y Correo -->
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="cell-user-avatar @avatarColor">
+                                        @iniciales
+                                    </div>
+                                    <div>
+                                        <div class="cell-name">@user.Nombre @user.Apellido</div>
+                                        <div class="cell-email">
+                                            <i class="bi bi-envelope me-1"></i>@user.Email
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Rol -->
+                            <td>
+                                @if (rolLower.Contains("admin"))
+                                {
+                                    <span class="tag t-new">
+                                        <i class="bi bi-shield-check"></i> @(string.IsNullOrEmpty(user.Rol) ? "Administrador" : user.Rol)
+                                    </span>
+                                }
+                                else if (rolLower.Contains("repartidor"))
+                                {
+                                    <span class="tag t-active" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3);">
+                                        <i class="bi bi-truck"></i> @user.Rol
+                                    </span>
+                                }
+                                else if (rolLower.Contains("empleado") || rolLower.Contains("farmac"))
+                                {
+                                    <span class="tag t-teal">
+                                        <i class="bi bi-person-badge"></i> @user.Rol
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="tag t-used">
+                                        <i class="bi bi-person"></i> @(string.IsNullOrEmpty(user.Rol) ? "Usuario" : user.Rol)
+                                    </span>
+                                }
+                            </td>
+
+
+                            <!-- Estado -->
+                            <td>
+                                <form method="post" asp-controller="Usuario" asp-action="ToggleEstado" asp-route-id="@user.Uuid" class="d-inline toggle-estado-form" data-usuario-id="@user.Uuid" data-estado="@user.Estado.ToString().ToLowerInvariant()">
+                                    @Html.AntiForgeryToken()
+                                    @if (user.Estado)
+                                    {
+                                        <button type="submit" class="tag t-active border-0" title="Click para desactivar">
+                                            <span class="tag-dot"></span> Activo
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="submit" class="tag t-unavail border-0" title="Click para activar">
+                                            <span class="tag-dot"></span> Inactivo
+                                        </button>
+                                    }
+                                </form>
+                            </td>
+
+                            <!-- Acciones -->
+                            <td style="text-align: right;">
+                                <!-- Acciones Desktop -->
+                                <div class="d-none d-md-inline-flex align-items-center gap-1">
+                                    <!-- Botón Editar -->
+                                    <button class="btn-action-icon edit" data-bs-toggle="modal" data-bs-target="#modalEditar"
+                                        data-uuid="@user.Uuid"
+                                        data-nombre="@user.Nombre"
+                                        data-apellido="@user.Apellido"
+                                        data-email="@user.Email"
+                                        data-rol="@user.Rol.ToLower()"
+                                        data-estado="@user.Estado.ToString().ToLowerInvariant()">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    <!-- Botón Desactivar (antes "Eliminar") -->
+                                    <form method="post" asp-controller="Usuario" asp-action="Delete" asp-route-id="@user.Uuid" class="d-inline desactivar-form" data-usuario-id="@user.Uuid">
+                                        @Html.AntiForgeryToken()
+                                        <button type="button" class="btn-action-icon danger" title="Desactivar Usuario"
+                                            data-bs-toggle="modal" data-bs-target="#glassConfirmModal"
+                                            data-uuid="@user.Uuid" data-nombre="@user.Nombre">
+                                            <i class="bi bi-person-x-fill"></i>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Acciones Móvil (Desplegable 3 puntos a la derecha) -->
+                                <div class="dropdown d-inline-block d-md-none position-relative">
+                                    <button class="btn-action-icon" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false" title="Más opciones">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2 mobile-action-dropdown" style="min-width: 170px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border) !important; z-index: 1060;">
+                                        <li>
+                                            <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2 edit"
+                                                    data-bs-toggle="modal" data-bs-target="#modalEditar"
+                                                    data-uuid="@user.Uuid"
+                                                    data-nombre="@user.Nombre"
+                                                    data-apellido="@user.Apellido"
+                                                    data-email="@user.Email"
+                                                    data-rol="@user.Rol.ToLower()"
+                                                    data-estado="@user.Estado.ToString().ToLowerInvariant()"
+                                                    style="color: var(--t-base); font-size: 13.5px;">
+                                                <i class="bi bi-pencil-square text-primary"></i>
+                                                <span>Editar</span>
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider my-1" style="border-color: var(--border-soft);"></li>
+                                        <li>
+                                            <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2 text-danger"
+                                                    data-bs-toggle="modal" data-bs-target="#glassConfirmModal"
+                                                    data-uuid="@user.Uuid" data-nombre="@user.Nombre"
+                                                    style="font-size: 13.5px;">
+                                                <i class="bi bi-person-x-fill text-danger"></i>
+                                                <span>Desactivar</span>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="d-flex flex-column align-items-center justify-content-center text-muted">
+                                <i class="bi bi-people" style="font-size: 42px; opacity: 0.4; margin-bottom: 12px;"></i>
+                                <span class="fw-semibold">No se encontraron usuarios en la base de datos</span>
+                                <small class="text-muted mb-3">Comienza agregando el primer usuario de tu droguería.</small>
+                                <button class="btn btn--primary" data-bs-toggle="modal" data-bs-target="#modalCrear">
+                                    <i class="bi bi-plus-lg me-1"></i> Registrar Primer Usuario
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@* ================= MODAL DE CREACIÓN (GLASSMORPHISM) ================= *@
+<div class="modal fade" id="modalCrear" tabindex="-1" aria-labelledby="modalCrearLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-glass">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow" style="font-size: 10px;">Nuevo Registro</span>
+                    <h5 class="modal-title" id="modalCrearLabel">Crear Nuevo Usuario</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form method="post" asp-controller="Usuario" asp-action="Create">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label" for="nombreUsuario">Nombre</label>
+                            <input type="text" class="form-control" id="nombreUsuario" name="Nombre" placeholder="Ej. Juan" required maxlength="25" />
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="form-label" for="apellidoUsuario">Apellido</label>
+                            <input type="text" class="form-control" id="apellidoUsuario" name="Apellido" placeholder="Ej. Pérez" required maxlength="25" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label" for="emailUsuario">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="emailUsuario" name="Email" placeholder="juan.perez@drogueria.com" required maxlength="60" pattern="^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.(com|co|org|net|edu|gov|es|io|[a-zA-Z]{2,})$" title="Ejemplo: correo@@dominio.com o .co" />
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="form-label" for="rolUsuario">Rol del Sistema</label>
+                            <select class="form-select" id="rolUsuario" name="Rol" required>
+                                <option value="Cliente" selected>Cliente</option>
+                                <option value="Empleado">Empleado</option>
+                                <option value="Repartidor">Repartidor</option>
+                                <option value="Administrador">Administrador</option>
+                            </select>
+                        </div>
+
+
+                        <div class="col-sm-6">
+                            <label class="form-label" for="passwordUsuario">Contraseña</label>
+                            <div class="position-relative">
+                                <input type="password" class="form-control pe-5" id="passwordUsuario" name="Password" placeholder="••••••••" required minlength="8" maxlength="25" autocomplete="new-password" />
+                                <button type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2 border-0 bg-transparent text-muted" onclick="togglePass('passwordUsuario', this)" title="Ver contraseña">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="estadoUsuario" name="Estado" value="true" checked />
+                                <label class="form-check-label small fw-semibold" for="estadoUsuario" style="color: var(--t-base);">
+                                    Usuario Activo (Permite el inicio de sesión)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--ghost" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn--primary">
+                        <i class="bi bi-person-plus-fill me-1"></i> Guardar Usuario
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@*===============MODAL DE EDICION DE USUARIOS=======================================*@
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-glass">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow" style="font-size: 10px;">Editar Registro</span>
+                    <h5 class="modal-title" id="modalEditarLabel">Editar Usuario</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <form method="post" asp-controller="Usuario" asp-action="Update">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="uuidEditar" name="Uuid" value="" />
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label" for="nombreEditar">Nombre</label>
+                            <input type="text" class="form-control" id="nombreEditar" name="Nombre" placeholder="Ej. Juan" required maxlength="25" />
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="form-label" for="apellidoEditar">Apellido</label>
+                            <input type="text" class="form-control" id="apellidoEditar" name="Apellido" placeholder="Ej. Pérez" required maxlength="25" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label" for="emailEditar">Correo Electrónico</label>
+                            <input type="email" class="form-control" id="emailEditar" name="Email" placeholder="juan.perez@drogueria.com" required maxlength="60" pattern="^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.(com|co|org|net|edu|gov|es|io|[a-zA-Z]{2,})$" title="Ejemplo: correo@@dominio.com o .co" />
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="form-label" for="rolEditar">Rol del Sistema</label>
+                            <select class="form-select" id="rolEditar" name="Rol" required>
+                                <option value="Cliente" selected>Cliente</option>
+                                <option value="Empleado">Empleado</option>
+                                <option value="Repartidor">Repartidor</option>
+                                <option value="Administrador">Administrador</option>
+                            </select>
+                        </div>
+
+
+                        <div class="col-sm-6">
+                            <label class="form-label" for="passwordEditar">Contraseña</label>
+                            <div class="position-relative">
+                                <input type="password" class="form-control pe-5" id="passwordEditar" name="Password" placeholder="Dejar en blanco para no cambiarla" minlength="8" maxlength="25" autocomplete="new-password" />
+                                <button type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2 border-0 bg-transparent text-muted" onclick="togglePass('passwordEditar', this)" title="Ver contraseña">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Déjala vacía si no quieres cambiar la contraseña actual.</small>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="estadoEditar" name="Estado" value="true" checked />
+                                <label class="form-check-label small fw-semibold" for="estadoEditar" style="color: var(--t-base);">
+                                    Usuario Activo (Permite el inicio de sesión)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn--ghost" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn--primary">
+                        <i class="bi bi-person-plus-fill me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ================= MODAL DE CONFIRMACIÓN (GLASSMORPHISM) ================= *@
+<div class="modal fade" id="glassConfirmModal" tabindex="-1" aria-labelledby="glassConfirmLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content modal-glass">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="glassConfirmLabel">¿Desactivar usuario?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <p style="color: var(--t-muted); font-size: 13px; margin: 0;" id="glassConfirmTexto">
+            Esta acción desactivará al usuario seleccionado. Podrás reactivarlo cuando quieras desde el listado.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn--ghost" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" id="btnConfirmarEliminar" class="btn btn--ghost"
+            style="color: var(--danger); border-color: var(--danger);" onclick="confirmarDesactivarUsuario()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+            </svg>
+            Desactivar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+@section Scripts {
+    <script>
+    function validarFormulario(form) {
+        if (!form) return false;
+
+        const requiredFields = form.querySelectorAll("input[required], select[required]");
+        let valido = true;
+
+        requiredFields.forEach(function (campo) {
+            if (!campo.value.trim()) {
+                campo.classList.add("is-invalid");
+                valido = false;
+            } else {
+                campo.classList.remove("is-invalid");
+            }
+        });
+
+        if (!valido) {
+            form.reportValidity();
+        }
+
+        return valido;
+    }
+
+    function showUsuario(uuid) {
+        const fila = document.querySelector(`.fila-usuario[data-uuid="${uuid}"]`);
+        if (!fila) return;
+
+        document.querySelectorAll(".fila-usuario").forEach(function (row) {
+            row.classList.remove("table-active");
+        });
+
+        fila.classList.add("table-active");
+
+        const startY = window.scrollY;
+        const rect = fila.getBoundingClientRect();
+        const targetY = startY + rect.top - (window.innerHeight / 2 - rect.height / 2);
+        const duration = 180;
+
+        function animarScroll(inicio, fin, tiempoActual) {
+            const progreso = Math.min(tiempoActual / duration, 1);
+            const ease = 1 - Math.pow(1 - progreso, 3);
+            window.scrollTo({ top: inicio + (fin - inicio) * ease, behavior: "auto" });
+
+            if (progreso < 1) {
+                requestAnimationFrame((ts) => animarScroll(inicio, fin, ts - startTime));
+            }
+        }
+
+        const startTime = performance.now();
+        requestAnimationFrame((ts) => animarScroll(startY, targetY, ts - startTime));
+    }
+
+    function createUsuario() {
+        const form = document.querySelector("#modalCrear form");
+        if (!form) return;
+
+        if (!validarFormulario(form)) return;
+
+        form.submit();
+    }
+
+    function editUsuario(event) {
+        const button = event?.relatedTarget || document.querySelector(".btn-action-icon.edit.active");
+
+        if (!button) return;
+
+        const uuid = button.getAttribute("data-uuid");
+        const nombre = button.getAttribute("data-nombre");
+        const apellido = button.getAttribute("data-apellido");
+        const email = button.getAttribute("data-email");
+        const rol = button.getAttribute("data-rol");
+        const estado = button.getAttribute("data-estado");
+
+        const uuidInput = document.getElementById("uuidEditar");
+        const nombreInput = document.getElementById("nombreEditar");
+        const apellidoInput = document.getElementById("apellidoEditar");
+        const emailInput = document.getElementById("emailEditar");
+        const passwordInput = document.getElementById("passwordEditar");
+        const estadoInput = document.getElementById("estadoEditar");
+        const rolSelect = document.getElementById("rolEditar");
+
+        if (uuidInput) uuidInput.value = uuid || "";
+        if (nombreInput) nombreInput.value = nombre || "";
+        if (apellidoInput) apellidoInput.value = apellido || "";
+        if (emailInput) emailInput.value = email || "";
+        if (passwordInput) passwordInput.value = "";
+        if (estadoInput) estadoInput.checked = String(estado).toLowerCase() === "true";
+        if (rolSelect) {
+            const valorRol = (rol || "cliente").toLowerCase();
+            const rolesValidos = ["cliente", "empleado", "repartidor", "administrador"];
+            rolSelect.value = rolesValidos.includes(valorRol) ? valorRol.charAt(0).toUpperCase() + valorRol.slice(1) : "Cliente";
+        }
+
+    }
+
+    function updateUsuario(uuid) {
+        const form = document.querySelector("#modalEditar form");
+        if (!form) return;
+
+        if (uuid && form.querySelector("#uuidEditar")) {
+            form.querySelector("#uuidEditar").value = uuid;
+        }
+
+        if (!validarFormulario(form)) return;
+
+        form.submit();
+    }
+
+    function activarUsuario(uuid) {
+        const form = document.querySelector(`form.toggle-estado-form[data-usuario-id="${uuid}"]`);
+        if (!form) return;
+
+        const activo = form.dataset.estado === "true";
+        if (activo) {
+            if (!confirm("Este usuario ya está activo. ¿Deseas cambiar su estado?")) return;
+        }
+
+        form.submit();
+    }
+
+    function desactivarUsuario(uuid) {
+        const form = document.querySelector(`form.toggle-estado-form[data-usuario-id="${uuid}"]`);
+        if (!form) return;
+
+        const activo = form.dataset.estado === "true";
+        if (!activo) {
+            if (!confirm("Este usuario ya está inactivo. ¿Deseas cambiar su estado?")) return;
+        }
+
+        form.submit();
+    }
+
+    function togglePass(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const icon = btn.querySelector("i");
+
+        if (!input || !icon) return;
+
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove("bi-eye");
+            icon.classList.add("bi-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.remove("bi-eye-slash");
+            icon.classList.add("bi-eye");
+        }
+    }
+
+    function copiarUuid(uuid, btn) {
+        if (!uuid || !navigator.clipboard) return;
+
+        navigator.clipboard.writeText(uuid).then(function () {
+            const icon = btn.querySelector("i");
+            if (!icon) return;
+
+            icon.classList.remove("bi-clipboard");
+            icon.classList.add("bi-check2");
+
+            setTimeout(function () {
+                icon.classList.remove("bi-check2");
+                icon.classList.add("bi-clipboard");
+            }, 1500);
+        });
+    }
+
+    function filtrarUsuarios() {
+        const inputFiltro = document.getElementById("filtroUsuarios");
+        const selectRol = document.getElementById("filtroRol");
+        const filas = document.querySelectorAll(".fila-usuario");
+
+        const texto = inputFiltro?.value.toLowerCase().trim() || "";
+        const rol = selectRol?.value.toLowerCase().trim() || "";
+
+        filas.forEach(function (fila) {
+            const contenido = fila.textContent.toLowerCase();
+            const filaRol = fila.getAttribute("data-rol")?.toLowerCase() || "";
+
+            const coincideTexto = !texto || contenido.includes(texto);
+            const coincideRol = !rol || filaRol === rol || filaRol.includes(rol);
+
+            fila.style.display = coincideTexto && coincideRol ? "" : "none";
+        });
+    }
+
+    function cargarFecha() {
+        const fechaEl = document.getElementById("heroDate");
+        if (!fechaEl) return;
+
+        const hoy = new Date();
+        const opciones = { day: "numeric", month: "long", year: "numeric" };
+        fechaEl.innerHTML = `<i class="bi bi-calendar3 me-1"></i> ` + hoy.toLocaleDateString("es-ES", opciones);
+    }
+
+    function autoOcultarAlertas() {
+        document.querySelectorAll(".alert-dismissible").forEach(function (alertEl) {
+            setTimeout(function () {
+                const instancia = bootstrap.Alert.getOrCreateInstance(alertEl);
+                instancia.close();
+            }, 4000);
+        });
+    }
+
+    let uuidADesactivar = null;
+
+    async function confirmarDesactivarUsuario() {
+        if (!uuidADesactivar) return;
+
+        const form = document.querySelector(`.desactivar-form[data-usuario-id="${uuidADesactivar}"]`);
+        if (!form) return;
+
+        const btnConfirmar = document.querySelector("#glassConfirmModal .btn-danger");
+        if (btnConfirmar) btnConfirmar.disabled = true;
+
+        const formData = new FormData(form);
+        const res = await window.postFormAjax(form.action, formData);
+
+        if (btnConfirmar) btnConfirmar.disabled = false;
+
+        const modalEl = document.getElementById("glassConfirmModal");
+        if (modalEl) {
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+
+        if (res.success) {
+            window.showAppToast(res.message, "success");
+            // Actualizar fila del usuario
+            const tr = form.closest("tr");
+            if (tr) {
+                const toggleForm = tr.querySelector(".toggle-estado-form");
+                if (toggleForm) {
+                    toggleForm.dataset.estado = "false";
+                    toggleForm.innerHTML = `
+                        <input type="hidden" name="__RequestVerificationToken" value="${formData.get('__RequestVerificationToken') || ''}" />
+                        <button type="submit" class="tag t-unavail border-0" title="Click para activar">
+                            <span class="tag-dot"></span> Inactivo
+                        </button>
+                    `;
+                }
+                const editBtn = tr.querySelector(".btn-action-icon.edit");
+                if (editBtn) editBtn.setAttribute("data-estado", "false");
+            }
+        } else {
+            window.showAppToast(res.message || "Error al desactivar el usuario.", "error");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        cargarFecha();
+        autoOcultarAlertas();
+
+        document.getElementById("filtroUsuarios")?.addEventListener("input", filtrarUsuarios);
+        document.getElementById("filtroRol")?.addEventListener("change", filtrarUsuarios);
+
+        const editModal = document.getElementById("modalEditar");
+        if (editModal) {
+            editModal.addEventListener("show.bs.modal", editUsuario);
+        }
+
+        const confirmModal = document.getElementById("glassConfirmModal");
+        if (confirmModal) {
+            confirmModal.addEventListener("show.bs.modal", function (event) {
+                const boton = event.relatedTarget;
+                uuidADesactivar = boton?.getAttribute("data-uuid") || null;
+                const nombre = boton?.getAttribute("data-nombre") || "este usuario";
+
+                const texto = document.getElementById("glassConfirmTexto");
+                if (texto) {
+                    texto.textContent = `Esta acción desactivará a ${nombre}. Podrás reactivarlo cuando quieras desde el listado.`;
+                }
+            });
+        }
+
+        // Crear Usuario vía AJAX
+        const formCrear = document.querySelector("#modalCrear form");
+        if (formCrear) {
+            formCrear.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                if (!validarFormulario(formCrear)) return;
+
+                const btnSubmit = formCrear.querySelector("button[type='submit']");
+                if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...'; }
+
+                const formData = new FormData(formCrear);
+                const res = await window.postFormAjax(formCrear.action || "/Usuario/Create", formData);
+
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = '<span>Guardar Usuario</span><i class="bi bi-arrow-right ms-2"></i>'; }
+
+                if (res.success) {
+                    window.showAppToast(res.message, "success");
+                    formCrear.reset();
+                    const modalEl = document.getElementById("modalCrear");
+                    if (modalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    window.showAppToast(res.message || "Error al crear usuario", "error");
+                }
+            });
+        }
+
+        // Editar Usuario vía AJAX
+        const formEditar = document.querySelector("#modalEditar form");
+        if (formEditar) {
+            formEditar.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                if (!validarFormulario(formEditar)) return;
+
+                const btnSubmit = formEditar.querySelector("button[type='submit']");
+                if (btnSubmit) { btnSubmit.disabled = true; btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Actualizando...'; }
+
+                const formData = new FormData(formEditar);
+                const res = await window.postFormAjax(formEditar.action || "/Usuario/Update", formData);
+
+                if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = '<span>Guardar Cambios</span><i class="bi bi-check-lg ms-2"></i>'; }
+
+                if (res.success) {
+                    window.showAppToast(res.message, "success");
+                    const modalEl = document.getElementById("modalEditar");
+                    if (modalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    window.showAppToast(res.message || "Error al actualizar usuario", "error");
+                }
+            });
+        }
+
+        document.querySelectorAll(".btn-action-icon.edit").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                document.querySelectorAll(".btn-action-icon.edit").forEach(function (item) {
+                    item.classList.remove("active");
+                });
+                btn.classList.add("active");
+            });
+        });
+
+        // Alternar Estado vía AJAX
+        document.querySelectorAll(".toggle-estado-form").forEach(function (form) {
+            form.addEventListener("submit", async function (event) {
+                event.preventDefault();
+                const estadoActual = this.dataset.estado === "true";
+                const accion = estadoActual ? "desactivar" : "activar";
+                const nombre = this.closest("tr")?.querySelector(".cell-name")?.textContent?.trim() || "este usuario";
+
+                if (!confirm(`¿Seguro que quieres ${accion} a ${nombre}?`)) {
+                    return;
+                }
+
+                const formData = new FormData(form);
+                const res = await window.postFormAjax(form.action, formData);
+
+                if (res.success) {
+                    window.showAppToast(res.message, "success");
+                    const nuevoEstado = res.estado;
+                    form.dataset.estado = nuevoEstado ? "true" : "false";
+                    form.innerHTML = `
+                        <input type="hidden" name="__RequestVerificationToken" value="${formData.get('__RequestVerificationToken') || ''}" />
+                        <button type="submit" class="tag ${nuevoEstado ? "t-active" : "t-unavail"} border-0" title="Click para ${nuevoEstado ? "desactivar" : "activar"}">
+                            <span class="tag-dot"></span> ${nuevoEstado ? "Activo" : "Inactivo"}
+                        </button>
+                    `;
+                    const tr = form.closest("tr");
+                    if (tr) {
+                        const editBtn = tr.querySelector(".btn-action-icon.edit");
+                        if (editBtn) editBtn.setAttribute("data-estado", nuevoEstado ? "true" : "false");
+                    }
+                } else {
+                    window.showAppToast(res.message || "Error al actualizar estado.", "error");
+                }
+            });
+        });
+    });
+    </script>
+}

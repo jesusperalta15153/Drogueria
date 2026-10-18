@@ -1,0 +1,210 @@
+@using System.Security.Claims
+@{
+    var brandInitial = "DR";
+    var brandName = "FarmaVida";
+    var activeNav = (ViewData["ActiveNav"]?.ToString() ?? "dashboard").ToLower();
+    var userName = User.Identity?.IsAuthenticated == true ? User.Identity.Name : "Usuario";
+    var userRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "Cliente";
+    var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+    var isCliente = string.Equals(userRole, "Cliente", StringComparison.OrdinalIgnoreCase);
+    var isAdmin = string.Equals(userRole, "Administrador", StringComparison.OrdinalIgnoreCase);
+    var isEmpleado = string.Equals(userRole, "Empleado", StringComparison.OrdinalIgnoreCase);
+    var isRepartidor = string.Equals(userRole, "Repartidor", StringComparison.OrdinalIgnoreCase);
+    var initials = !string.IsNullOrEmpty(userName) && userName.Length >= 2 
+        ? userName.Substring(0, 2).ToUpper() 
+        : brandInitial;
+        
+    var roleTagText = isAdmin ? "Panel Administrador" : (isEmpleado ? "Panel Empleado" : (isRepartidor ? "Panel Repartidor" : "Tienda Online"));
+    var homeUrl = isCliente ? "/Tienda/Catalogo" : (isEmpleado ? "/Empleado/Productos" : (isRepartidor ? "/Repartidor/MisDomicilios" : "/Usuario"));
+}
+
+
+<aside class="d-sidebar" id="appSidebar">
+
+  <!-- Botón sobre la línea divisoria entre sidebar y navbar -->
+  <button class="sidebar-edge-toggle" id="sidebarToggle" type="button" aria-label="Alternar barra lateral" title="Colapsar / Expandir menú">
+    <i class="bi bi-chevron-left" id="sidebarToggleIcon"></i>
+  </button>
+
+  <!-- Header & Brand -->
+  <div class="brand-wrapper">
+    <a href="@homeUrl" class="brand" title="@brandName">
+      <div class="brand-logo">
+        <img src="~/img/logodrogueria.svg" alt="logo" class="brand-img" onerror="this.style.display='none'; var f=this.nextElementSibling; if(f) f.style.display='flex';" />
+        <div class="brand-fallback-logo" style="display:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" />
+            <path d="m8.5 8.5 7 7" />
+          </svg>
+        </div>
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">@brandName</div>
+        <div class="brand-tag">@roleTagText</div>
+      </div>
+    </a>
+  </div>
+
+  <!-- Scrollable Navigations -->
+  <div class="sidebar-scrollable">
+
+    @if (isCliente)
+    {
+      @* ================= MENÚ CLIENTE ================= *@
+      <nav class="nav-section">
+        <div class="nav-label">Mi Tienda</div>
+
+        <a class="nav-link @(activeNav == "catalogo" ? "is-active" : "")" asp-controller="Tienda" asp-action="Catalogo" data-tooltip="Catálogo" title="Catálogo">
+          <i class="bi bi-grid-fill fs-5 me-1"></i>
+          <span>Catálogo</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "carrito" ? "is-active" : "")" asp-controller="Tienda" asp-action="Carrito" data-tooltip="Carrito" title="Carrito">
+          <i class="bi bi-cart3 fs-5 me-1"></i>
+          <span>Carrito</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "pedidos" ? "is-active" : "")" asp-controller="Tienda" asp-action="MisPedidos" data-tooltip="Mis Pedidos" title="Mis Pedidos">
+          <i class="bi bi-receipt-cutoff fs-5 me-1"></i>
+          <span>Mis Pedidos</span>
+        </a>
+      </nav>
+    }
+    else if (isAdmin)
+    {
+      @* ================= MENÚ ADMINISTRADOR ================= *@
+      <nav class="nav-section">
+        <div class="nav-label">Administración</div>
+
+        <a class="nav-link @(activeNav == "dashboard" ? "is-active" : "")" asp-controller="Usuario" asp-action="Dashboard" data-tooltip="Dashboard" title="Dashboard / Panel General">
+          <i class="bi bi-speedometer2 fs-5 me-1"></i>
+          <span>Dashboard</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "productos" ? "is-active" : "")" asp-controller="Producto" asp-action="Index" data-tooltip="Productos" title="Gestión de Productos">
+          <i class="bi bi-box-seam fs-5 me-1"></i>
+          <span>Productos</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "inventario" ? "is-active" : "")" asp-controller="Empleado" asp-action="Inventario" data-tooltip="Inventario" title="Gestión de Inventario / Stock">
+          <i class="bi bi-boxes fs-5 me-1"></i>
+          <span>Inventario</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "pedidos" ? "is-active" : "")" asp-controller="Empleado" asp-action="Pedidos" data-tooltip="Pedidos" title="Gestión de Pedidos">
+          <i class="bi bi-clipboard-check fs-5 me-1"></i>
+          <span>Pedidos</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "usuarios" ? "is-active" : "")" asp-controller="Usuario" asp-action="Index" data-tooltip="Usuarios" title="Gestión de Usuarios">
+          <i class="bi bi-people-fill fs-5 me-1"></i>
+          <span>Usuarios</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "categorias" ? "is-active" : "")" asp-controller="Categoria" asp-action="Index" data-tooltip="Categorías" title="Gestión de Categorías">
+          <i class="bi bi-tags-fill fs-5 me-1"></i>
+          <span>Categorías</span>
+        </a>
+      </nav>
+
+      @* ================= ACCESOS RÁPIDOS (Admin) ================= *@
+      <nav class="nav-section">
+        <div class="nav-label">Tienda Pública</div>
+
+        <a class="nav-link @(activeNav == "catalogo" ? "is-active" : "")" asp-controller="Tienda" asp-action="Catalogo" data-tooltip="Catálogo Tienda" title="Ir al Catálogo de la Tienda">
+          <i class="bi bi-shop fs-5 me-1 text-primary"></i>
+          <span>Tienda Pública</span>
+        </a>
+      </nav>
+    }
+    else if (isEmpleado)
+    {
+      @* ================= MENÚ EMPLEADO ================= *@
+      <nav class="nav-section">
+        <div class="nav-label">Panel Empleado</div>
+
+        <a class="nav-link @(activeNav == "productos" ? "is-active" : "")" asp-controller="Empleado" asp-action="Productos" data-tooltip="Productos" title="Catálogo de Productos">
+          <i class="bi bi-capsule fs-5 me-1"></i>
+          <span>Productos</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "inventario" ? "is-active" : "")" asp-controller="Empleado" asp-action="Inventario" data-tooltip="Inventario" title="Gestión de Stock / Inventario">
+          <i class="bi bi-boxes fs-5 me-1"></i>
+          <span>Inventario</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "pedidos" ? "is-active" : "")" asp-controller="Empleado" asp-action="Pedidos" data-tooltip="Pedidos" title="Gestión de Pedidos de Clientes">
+          <i class="bi bi-clipboard-check fs-5 me-1"></i>
+          <span>Pedidos</span>
+        </a>
+      </nav>
+    }
+    else if (isRepartidor)
+    {
+      @* ================= MENÚ REPARTIDOR ================= *@
+      <nav class="nav-section">
+        <div class="nav-label">Panel Repartidor</div>
+
+        <a class="nav-link @(activeNav == "misdomicilios" || activeNav == "domicilios" ? "is-active" : "")" asp-controller="Repartidor" asp-action="MisDomicilios" data-tooltip="Mis Domicilios" title="Pedidos Activos y Rutas">
+          <i class="bi bi-truck fs-5 me-1"></i>
+          <span>Mis Domicilios</span>
+        </a>
+
+        <a class="nav-link @(activeNav == "historial" ? "is-active" : "")" asp-controller="Repartidor" asp-action="Historial" data-tooltip="Historial" title="Historial de Entregas Completadas">
+          <i class="bi bi-clock-history fs-5 me-1"></i>
+          <span>Historial</span>
+        </a>
+      </nav>
+    }
+
+
+  </div>
+    
+  @* ================= FOOTER / PROFILE ================= *@
+  <div class="sidebar-footer">
+    <div class="dd-wrap">
+      <div class="workspace" id="profileDropdownBtn" data-dropdown tabindex="0" role="button" aria-label="Menú de cuenta" title="@userName (@userRole)">
+        <div class="workspace-avatar">@initials</div>
+        <div class="workspace-text">
+          <div class="workspace-name">@userName</div>
+          <div class="workspace-role">@userRole</div>
+        </div>
+        <svg class="workspace-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="m7 9 5-5 5 5" />
+          <path d="m7 15 5 5 5-5" />
+        </svg>
+      </div>
+
+      <div class="dd-menu dd-profile" id="profileDropdownMenu" role="menu">
+        <div class="dd-profile-head">
+          <div class="dd-profile-name">@userName</div>
+          <div class="dd-profile-email">@userEmail</div>
+        </div>
+        <a class="dd-menu-item" href="#settings">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          <span>Ajustes</span>
+        </a>
+        <a class="dd-menu-item" asp-controller="Account" asp-action="Perfil">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>Perfil</span>
+        </a>
+        <div class="dd-divider"></div>
+        <form method="post" asp-controller="Account" asp-action="Logout">
+          @Html.AntiForgeryToken()
+          <button type="submit" class="dd-menu-item danger" style="width:100%; border:0; background:none; text-align:left;">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
+            <span>Cerrar sesión</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</aside>

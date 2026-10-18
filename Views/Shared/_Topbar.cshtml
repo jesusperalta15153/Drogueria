@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FarmaVida</title>
+    <link rel="icon" type="image/svg+xml" href="~/img/logodrogueria.svg" />
+
+    <script>
+        // Carga inmediata de tema para evitar parpadeo blanco (FOUC)
+        (function () {
+            const savedTheme = localStorage.getItem('app_theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        })();
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5 CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    <!-- Site / Dashboard Styles -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tienda.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/empleado.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/Drogueria.site.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation Partial -->
+        <partial name="_Sidebar" />
+
+        <!-- Mobile Drawer Backdrop -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+        <!-- Main Workspace -->
+        <div class="app-main">
+            <!-- App Topbar -->
+            <header class="app-header">
+                <div class="header-left">
+                    <button class="btn-icon d-lg-none" id="mobileSidebarToggle" type="button" aria-label="Abrir menú" title="Abrir menú">
+                        <i class="bi bi-list fs-5"></i>
+                    </button>
+                    <div class="header-breadcrumb d-none d-md-flex align-items-center gap-2">
+                        @{
+                            var topbarHomeUrl = User.IsInRole("Cliente") ? "/Tienda/Catalogo" : (User.IsInRole("Empleado") ? "/Empleado/Productos" : "/Usuario");
+                        }
+                        <a href="@topbarHomeUrl" class="text-muted small text-decoration-none d-flex align-items-center gap-1 hover-primary">
+                            <i class="bi bi-house-door" style="font-size: 13px;"></i>
+                            <span>FarmaVida</span>
+                        </a>
+                        <i class="bi bi-chevron-right text-muted" style="font-size: 10px; opacity: 0.6;"></i>
+                        <span class="fw-semibold small px-2-5 py-1 rounded-pill" style="background: var(--primary-soft); color: var(--primary);">
+                            @(ViewData["Title"] ?? "Dashboard")
+                        </span>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <div class="header-actions d-flex align-items-center gap-2">
+
+                        @{
+                            var topbarActiveNav = (ViewData["ActiveNav"]?.ToString() ?? "").ToLower();
+                            var topbarIsRepartidor = User.IsInRole("Repartidor");
+                        }
+                        @if (topbarIsRepartidor)
+                        {
+                            <div class="d-flex align-items-center gap-2 pe-2 me-1 border-end" style="border-color: var(--border) !important;">
+                                <a asp-controller="Repartidor" asp-action="MisDomicilios"
+                                   class="btn btn-sm rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-1
+                                   @(topbarActiveNav == "misdomicilios" ? "btn-warning" : "btn-outline-secondary border-0")"
+                                   style="font-size:13px;"
+                                   title="Pedidos activos">
+                                    <i class="bi bi-truck"></i>
+                                    <span class="d-none d-sm-inline">Mis Domicilios</span>
+                                </a>
+                                <a asp-controller="Repartidor" asp-action="Historial"
+                                   class="btn btn-sm rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-1
+                                   @(topbarActiveNav == "historial" ? "btn-warning" : "btn-outline-secondary border-0")"
+                                   style="font-size:13px;"
+                                   title="Historial de entregas">
+                                    <i class="bi bi-clock-history"></i>
+                                    <span class="d-none d-sm-inline">Historial</span>
+                                </a>
+                            </div>
+                        }
+
+                        <!-- Dark / Light Theme Toggle Button -->
+                        <button class="btn-icon" id="themeToggleBtn" title="Cambiar tema oscuro / claro" type="button" aria-label="Cambiar tema">
+                            <i class="bi bi-moon-stars" id="themeIcon"></i>
+                        </button>
+
+                        @{
+                            var topbarUserName = User.Identity?.IsAuthenticated == true ? User.Identity.Name : "Usuario";
+                            var topbarRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "";
+                            var topbarInitials = !string.IsNullOrEmpty(topbarUserName) && topbarUserName.Length >= 2
+                                ? topbarUserName.Substring(0, 2).ToUpper()
+                                : "US";
+                            var isRoleAdmin = topbarRole == "Administrador";
+                            var isRoleEmp = topbarRole == "Empleado";
+                            var roleBadgeBg = isRoleAdmin ? "rgba(124, 58, 237, 0.12)" : (isRoleEmp ? "rgba(20, 184, 166, 0.12)" : "var(--primary-soft)");
+                            var roleBadgeColor = isRoleAdmin ? "#7c3aed" : (isRoleEmp ? "#0d9488" : "var(--primary)");
+                        }
+                        <div class="d-none d-md-flex align-items-center gap-2 ps-2 ms-1 border-start" style="border-color: var(--border) !important;">
+                            <div class="cell-user-avatar" style="width: 34px; height: 34px; font-size: 11.5px; font-weight: 700; border-radius: 10px; background: @roleBadgeBg; color: @roleBadgeColor; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                                @topbarInitials
+                            </div>
+                            <div class="d-flex flex-column" style="line-height: 1.2;">
+                                <span class="fw-bold small" style="color: var(--t-base);">@topbarUserName</span>
+                                <span class="badge rounded-pill" style="font-size: 10px; padding: 2px 8px; width: fit-content; background: @roleBadgeBg; color: @roleBadgeColor;">@topbarRole</span>
+                            </div>
+
+                            <!-- Botón de Cerrar Sesión -->
+                            <form method="post" asp-controller="Account" asp-action="Logout" class="ms-2">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-circle p-1 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;" title="Cerrar sesión" aria-label="Cerrar sesión">
+                                    <i class="bi bi-box-arrow-right fs-6"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Page -->
+            <main role="main" class="app-content">
+                @RenderBody()
+            </main>
+
+            <!-- App Footer -->
+            <footer class="app-footer">
+                <div class="container-fluid d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 p-0">
+                    <div>
+                        &copy; @DateTime.Now.Year <span class="fw-semibold">FarmaVida</span>. Todos los derechos reservados.
+                    </div>
+                    <div class="text-muted small">
+                        Sistema Gestor de FarmaVida :) v1.0
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
