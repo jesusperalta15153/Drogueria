@@ -125,7 +125,7 @@ namespace Drogueria.Controllers
                 usuario.Nombre = usuario.Nombre?.Trim() ?? "";
                 usuario.Apellido = usuario.Apellido?.Trim() ?? "";
                 usuario.Email = usuario.Email?.Trim().ToLower() ?? "";
-                usuario.Password = BCrypt.Net.BCrypt.HashPassword(usuario.Password?.Trim() ?? "");
+                usuario.Password = BCrypt.Net.BCrypt.HashPassword(usuario.Password?.Trim() ?? "", workFactor: 10);
 
                 _context.Usuarios.Add(usuario);
                 await _context.SaveChangesAsync();

@@ -16,7 +16,7 @@ public static class DbInitializer
                 Nombre = "Administrador",
                 Apellido = "Principal",
                 Email = "admin@drogueria.com",
-                Password = BCrypt.Net.BCrypt.HashPassword("Admin1234*"),
+                Password = BCrypt.Net.BCrypt.HashPassword("Admin1234*", workFactor: 10),
                 Rol = "Administrador",
                 Estado = true,
                 Telefono = "3001112233"
@@ -32,7 +32,7 @@ public static class DbInitializer
                 Nombre = "Recepcionista",
                 Apellido = "Drogueria",
                 Email = "recepcionista@drogueria.com",
-                Password = BCrypt.Net.BCrypt.HashPassword("Recepcion1234*"),
+                Password = BCrypt.Net.BCrypt.HashPassword("Recepcion1234*", workFactor: 10),
                 Rol = "Empleado",
                 Estado = true,
                 Telefono = "3002223344"
@@ -48,7 +48,7 @@ public static class DbInitializer
                 Nombre = "Repartidor",
                 Apellido = "Express",
                 Email = "repartidor@drogueria.com",
-                Password = BCrypt.Net.BCrypt.HashPassword("Repartidor1234*"),
+                Password = BCrypt.Net.BCrypt.HashPassword("Repartidor1234*", workFactor: 10),
                 Rol = "Repartidor",
                 Estado = true,
                 Telefono = "3003334455",
@@ -67,7 +67,7 @@ public static class DbInitializer
                 Nombre = "Cliente",
                 Apellido = "Frecuente",
                 Email = "cliente@drogueria.com",
-                Password = BCrypt.Net.BCrypt.HashPassword("Cliente1234*"),
+                Password = BCrypt.Net.BCrypt.HashPassword("Cliente1234*", workFactor: 10),
                 Rol = "Cliente",
                 Estado = true,
                 Telefono = "3004445566"

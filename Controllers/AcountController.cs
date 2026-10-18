@@ -213,7 +213,7 @@ namespace Drogueria.Controllers
             _context.Usuarios.Add(new Usuario
             {
                 Nombre = nombre.Trim(), Apellido = apellido.Trim(), Email = email,
-                Password = BCrypt.Net.BCrypt.HashPassword(password), Rol = "Cliente", Estado = true
+                Password = BCrypt.Net.BCrypt.HashPassword(password, workFactor: 10), Rol = "Cliente", Estado = true
             });
             await _context.SaveChangesAsync();
 
