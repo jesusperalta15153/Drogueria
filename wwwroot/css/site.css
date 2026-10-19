@@ -2584,46 +2584,5 @@ body.modal-open .sticky-top {
     }
 }
 
-/* ==========================================================================
-   BOTÓN FLOTANTE DE WHATSAPP / ASISTENTE VIRTUAL
-   ========================================================================== */
-.btn-whatsapp-flotante {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 1050;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    color: #ffffff !important;
-    text-decoration: none !important;
-    padding: 12px 18px;
-    border-radius: 50px;
-    box-shadow: 0 4px 18px rgba(37, 211, 102, 0.45);
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.btn-whatsapp-flotante:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(37, 211, 102, 0.6);
-    color: #ffffff !important;
-}
-.btn-whatsapp-flotante i {
-    font-size: 22px;
-    line-height: 1;
-}
-@media (max-width: 576px) {
-    .btn-whatsapp-flotante {
-        bottom: 18px;
-        right: 18px;
-        padding: 12px;
-        border-radius: 50%;
-    }
-    .btn-whatsapp-flotante .btn-whatsapp-texto {
-        display: none;
-    }
-}
 
 
