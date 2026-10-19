@@ -15,3 +15,11 @@ out/
 ## OS generated
 .DS_Store
 Thumbs.db
+
+## Bot WhatsApp
+node_modules/
+BotWhatsApp/node_modules/
+auth_info_baileys/
+BotWhatsApp/auth_info_baileys/
+BotWhatsApp/codigo-qr.png
+
