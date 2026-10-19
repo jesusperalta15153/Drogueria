@@ -229,6 +229,14 @@ namespace Drogueria.Controllers
                 return Json(new { success = false, message = "El nombre de contacto es obligatorio." });
             if (string.IsNullOrWhiteSpace(telefono))
                 return Json(new { success = false, message = "El teléfono es obligatorio." });
+
+            var telLimpio = System.Text.RegularExpressions.Regex.Replace(telefono.Trim(), @"\D", "");
+            if (telLimpio.Length != 10 || !telLimpio.StartsWith("3"))
+            {
+                return Json(new { success = false, message = "El número telefónico debe tener exactamente 10 dígitos y comenzar por 3 (ej. 3001234567)." });
+            }
+            telefono = telLimpio;
+
             if (string.IsNullOrWhiteSpace(departamento))
                 return Json(new { success = false, message = "El departamento es obligatorio." });
             if (string.IsNullOrWhiteSpace(ciudad))

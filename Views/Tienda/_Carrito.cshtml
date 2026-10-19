@@ -232,12 +232,6 @@
                                                 }
                                                 <div>
                                                     <span class="carrito-item-name">@item.Nombre</span>
-                                                    @if (item.LimiteMaximoPorPedido.HasValue && item.LimiteMaximoPorPedido.Value > 0)
-                                                    {
-                                                        <div class="text-muted" style="font-size: 11px;">
-                                                            <i class="bi bi-exclamation-circle me-1 text-warning"></i>Límite: máx. @item.LimiteMaximoPorPedido.Value /pedido
-                                                        </div>
-                                                    }
                                                 </div>
                                             </div>
                                         </td>
@@ -377,8 +371,10 @@
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label fw-semibold small">Teléfono <span class="text-danger">*</span></label>
-                        <input type="tel" class="form-control" id="mdTelefono" maxlength="20"
-                               placeholder="Ej. 3001234567" />
+                        <input type="tel" class="form-control" id="mdTelefono" maxlength="10" inputmode="numeric"
+                               placeholder="Ej. 3001234567"
+                               oninput="this.value = this.value.replace(/\D/g, '').slice(0, 10);" />
+                        <div class="form-text small text-muted">10 dígitos iniciando por 3 (ej. 3001234567).</div>
                     </div>
                     <!-- 1. Departamento -->
                     <div class="col-sm-6">
@@ -428,7 +424,13 @@
                     </div>
                     <!-- Mapa de validación Leaflet -->
                     <div class="col-12" id="mapaValidacionWrap" style="display:none;">
-                        <div id="mapaValidacion" style="height:220px; border-radius:12px; border:1px solid var(--border, #dee2e6);"></div>
+                        <div class="alert alert-info py-2 px-3 mb-2 small d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle-fill fs-5 text-info"></i>
+                            <div>
+                                <strong>Ajuste manual del punto:</strong> Puedes <strong>arrastrar el marcador (pin)</strong> o <strong>hacer clic en el mapa</strong> para ajustar la ubicación exacta si no es del todo correcta.
+                            </div>
+                        </div>
+                        <div id="mapaValidacion" style="height:230px; border-radius:12px; border:1px solid var(--border, #dee2e6);"></div>
                     </div>
                 </div>
             </div>
@@ -737,6 +739,12 @@ document.addEventListener('DOMContentLoaded', function () {
         // Validación local
         if (!nombre) { resaltarCampo('mdNombre', 'El nombre es obligatorio.'); return; }
         if (!telefono) { resaltarCampo('mdTelefono', 'El teléfono es obligatorio.'); return; }
+        const telLimpio = telefono.replace(/\D/g, '');
+        if (telLimpio.length !== 10 || !telLimpio.startsWith('3')) {
+            resaltarCampo('mdTelefono', 'El teléfono debe tener 10 dígitos y comenzar por 3 (ej. 3001234567).');
+            mostrarToast('El teléfono debe tener 10 dígitos y comenzar por 3 (ej. 3001234567).', 'warning');
+            return;
+        }
         if (!departamento) { resaltarCampo('mdDepartamento', 'El departamento es obligatorio.'); return; }
         if (!ciudad) { resaltarCampo('mdCiudad', 'La ciudad es obligatoria.'); return; }
         if (!direccion) { resaltarCampo('mdDireccion', 'La dirección es obligatoria.'); return; }
@@ -989,12 +997,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 await new Promise(r => setTimeout(r, 250));
 
                 try {
+                    function vincularInteraccionMarker(marker) {
+                        marker.on('dragend', function (ev) {
+                            const p = ev.target.getLatLng();
+                            actualizarPuntoMarcado(p.lat, p.lng);
+                        });
+                    }
+
+                    function actualizarPuntoMarcado(nLat, nLon) {
+                        direccionValidadaOk = true;
+                        direccionValidadaTexto = `${direccion}|${ciudad}|${departamento}`;
+                        if (mapaMarker) {
+                            mapaMarker.setLatLng([nLat, nLon]);
+                            mapaMarker.bindPopup(`<b>Punto de entrega ajustado</b><br>Coordenadas: ${nLat.toFixed(5)}, ${nLon.toFixed(5)}`).openPopup();
+                        }
+                        msgEl.innerHTML = `<i class="bi bi-geo-alt-fill text-primary me-1"></i><strong>Ubicación ajustada manualmente:</strong> (${nLat.toFixed(5)}, ${nLon.toFixed(5)})`;
+                        msgEl.className = 'form-text text-primary';
+                    }
+
                     if (mapaLeaflet) {
                         mapaLeaflet.setView([lat, lon], 16);
                         if (mapaMarker) {
                             mapaMarker.setLatLng([lat, lon]);
+                            mapaMarker.bindPopup('<b>Ubicación de entrega</b><br>' + data.displayName).openPopup();
                         } else {
-                            mapaMarker = L.marker([lat, lon]).addTo(mapaLeaflet);
+                            mapaMarker = L.marker([lat, lon], { draggable: true }).addTo(mapaLeaflet);
+                            vincularInteraccionMarker(mapaMarker);
                         }
                         mapaLeaflet.invalidateSize();
                     } else {
@@ -1003,10 +1031,15 @@ document.addEventListener('DOMContentLoaded', function () {
                             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
                             maxZoom: 19
                         }).addTo(mapaLeaflet);
-                        mapaMarker = L.marker([lat, lon])
+                        mapaMarker = L.marker([lat, lon], { draggable: true })
                             .addTo(mapaLeaflet)
                             .bindPopup('<b>Ubicación Confirmada</b><br>' + data.displayName)
                             .openPopup();
+                        vincularInteraccionMarker(mapaMarker);
+
+                        mapaLeaflet.on('click', function(e) {
+                            actualizarPuntoMarcado(e.latlng.lat, e.latlng.lng);
+                        });
                         setTimeout(() => mapaLeaflet.invalidateSize(), 300);
                     }
                 } catch (mapErr) {
@@ -1081,7 +1114,17 @@ document.addEventListener('DOMContentLoaded', function () {
         const cantidadActual = parseInt(input.value) || 1;
         const maxPermitido = obtenerMaxPermitido(input);
         const nuevaCantidad = cantidadActual + delta;
-        if (nuevaCantidad < 1 || nuevaCantidad > maxPermitido) {
+        if (delta > 0 && nuevaCantidad > maxPermitido) {
+            const limiteMax = parseInt(input.getAttribute('data-limite'));
+            if (!isNaN(limiteMax) && limiteMax > 0 && maxPermitido === limiteMax) {
+                mostrarToast(`No puedes comprar más de ${limiteMax} unidades por pedido.`, 'warning', 10000);
+            } else {
+                mostrarToast(`Solo hay ${maxPermitido} unidades disponibles.`, 'warning');
+            }
+            actualizarBotones(productoId);
+            return;
+        }
+        if (nuevaCantidad < 1) {
             actualizarBotones(productoId);
             return;
         }
@@ -1097,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', function () {
             input.value = maxPermitido;
             const limiteMax = parseInt(input.getAttribute('data-limite'));
             if (!isNaN(limiteMax) && limiteMax > 0 && maxPermitido === limiteMax) {
-                mostrarToast(`El límite máximo por pedido para este producto es de ${limiteMax} unidades.`, 'warning');
+                mostrarToast(`No puedes comprar más de ${limiteMax} unidades por pedido.`, 'warning', 10000);
             } else {
                 mostrarToast(`Solo hay ${maxPermitido} unidades disponibles.`, 'warning');
             }
@@ -1115,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', function () {
             cantidad = maxPermitido;
             const limiteMax = parseInt(input.getAttribute('data-limite'));
             if (!isNaN(limiteMax) && limiteMax > 0 && maxPermitido === limiteMax) {
-                mostrarToast(`El límite máximo por pedido para este producto es de ${limiteMax} unidades.`, 'warning');
+                mostrarToast(`No puedes comprar más de ${limiteMax} unidades por pedido.`, 'warning', 10000);
             } else {
                 mostrarToast(`Solo hay ${maxPermitido} unidades disponibles.`, 'warning');
             }
@@ -1151,7 +1194,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 actualizarBotones(productoId);
                 mostrarToast('Cantidad actualizada', 'success');
             } else {
-                mostrarToast(data.message || 'Error al actualizar cantidad', 'danger');
+                const toastDuration = (data.duration || (data.isLimit ? 10000 : 3500));
+                mostrarToast(data.message || 'Error al actualizar cantidad', 'warning', toastDuration);
                 const input = document.querySelector(`.item-cantidad-input[data-producto-id="${productoId}"]`);
                 if (input) {
                     if (data.limiteMaximo !== undefined) input.setAttribute('data-limite', data.limiteMaximo);

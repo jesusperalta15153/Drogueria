@@ -303,15 +303,21 @@
         }
 
         // Función global para mostrar Toast flotante sin saltos
-        function mostrarToast(mensaje, tipo = 'success') {
+        function mostrarToast(mensaje, tipo = 'success', delay = 3500) {
             const toastEl = document.getElementById('liveToast');
             const toastMsg = document.getElementById('toastMessage');
             if (!toastEl || !toastMsg) return;
 
             toastEl.className = `toast align-items-center text-white bg-${tipo} border-0 shadow-lg rounded-4`;
-            toastMsg.innerHTML = `<i class="bi bi-${tipo === 'success' ? 'check2-circle' : 'exclamation-circle'} fs-5"></i> <span>${mensaje}</span>`;
+            const icono = tipo === 'success' ? 'check2-circle' : (tipo === 'warning' ? 'exclamation-triangle-fill' : 'exclamation-circle');
+            toastMsg.innerHTML = `<i class="bi bi-${icono} fs-5 flex-shrink-0"></i> <span>${mensaje}</span>`;
             
-            const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3500 });
+            try {
+                const prev = bootstrap.Toast.getInstance(toastEl);
+                if (prev) prev.dispose();
+            } catch(e) {}
+
+            const toast = new bootstrap.Toast(toastEl, { delay: delay });
             toast.show();
         }
     </script>

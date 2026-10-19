@@ -99,10 +99,10 @@ namespace Drogueria.Controllers
             // Validar que no exceda el stock disponible ni el límite máximo por pedido
             if (producto.LimiteMaximoPorPedido.HasValue && nuevaCantidadTotal > producto.LimiteMaximoPorPedido.Value)
             {
-                var mensaje = $"El producto '{producto.Nombre}' tiene un límite máximo de {producto.LimiteMaximoPorPedido.Value} unidades por pedido.";
+                var mensaje = $"No puedes comprar más de {producto.LimiteMaximoPorPedido.Value} unidades por pedido.";
 
                 if (isAjax)
-                    return Json(new { success = false, message = mensaje });
+                    return Json(new { success = false, message = mensaje, isLimit = true, duration = 10000 });
 
                 TempData["Error"] = mensaje;
                 return RedirectToAction(nameof(Catalogo));
@@ -248,9 +248,9 @@ namespace Drogueria.Controllers
 
             if (producto.LimiteMaximoPorPedido.HasValue && cantidad > producto.LimiteMaximoPorPedido.Value)
             {
-                var mensaje = $"El producto '{producto.Nombre}' tiene un límite máximo de {producto.LimiteMaximoPorPedido.Value} unidades por pedido.";
+                var mensaje = $"No puedes comprar más de {producto.LimiteMaximoPorPedido.Value} unidades por pedido.";
                 if (isAjax)
-                    return Json(new { success = false, message = mensaje, limiteMaximo = producto.LimiteMaximoPorPedido.Value });
+                    return Json(new { success = false, message = mensaje, isLimit = true, duration = 10000, limiteMaximo = producto.LimiteMaximoPorPedido.Value });
 
                 TempData["Error"] = mensaje;
                 return RedirectToAction(nameof(Carrito));

@@ -173,13 +173,7 @@
                     <div class="producto-card-name" title="@p.Nombre">
                         @p.Nombre <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:10px;">@p.Miligramos @(string.IsNullOrEmpty(p.UnidadMedida) ? "mg" : p.UnidadMedida)</span>
                     </div>
-                    @if (p.LimiteMaximoPorPedido.HasValue)
-                    {
-                        <div class="small text-danger mt-1" style="font-size: 10px;">
-                            <i class="bi bi-exclamation-circle me-1"></i>Límite: máx. @p.LimiteMaximoPorPedido pastillas/pedido
-                        </div>
-                    }
-                    <div class="d-flex align-items-center justify-content-between mt-1">
+                    <div class="d-flex align-items-center justify-content-between mt-2">
                         <span class="producto-card-price">$@p.Precio.ToString("N2")</span>
                         <span class="producto-card-stock @(p.Stock <= p.StockMinimo ? "text-warning" : "text-muted")">
                             <i class="bi bi-box-seam me-1"></i> Stock: @p.Stock
@@ -247,6 +241,7 @@
                             <!-- Formulario de añadir al carrito sin saltos vía AJAX -->
                             <form id="formModalAgregarCarrito" onsubmit="agregarDesdeModal(event)">
                                 <input type="hidden" name="productoId" id="modalProductoId" value="" />
+                                <input type="hidden" id="modalLimiteMax" value="" />
                                 
                                 <div class="modal-producto-qty-row">
                                     <label for="modalCantidad" class="qty-label">Cantidad:</label>
@@ -435,7 +430,8 @@
                 // Mostrar toast no intrusivo
                 mostrarToast(data.message || 'Medicamento añadido al carrito', 'success');
             } else {
-                mostrarToast(data.message || 'No se pudo agregar el producto', 'danger');
+                const duration = data.duration || (data.message && data.message.includes('No puedes comprar más') ? 10000 : 3500);
+                mostrarToast(data.message || 'No se pudo agregar el producto', 'warning', duration);
             }
         } catch (e) {
             mostrarToast('Error al comunicar con el servidor', 'danger');
@@ -450,6 +446,7 @@
     // Modal de Detalle
     function abrirModalProducto(id, nombre, mg, unidadMedida, cat, precio, stock, limiteMax, desc, img) {
         document.getElementById('modalProductoId').value = id;
+        document.getElementById('modalLimiteMax').value = limiteMax || '';
         const unidad = unidadMedida || 'mg';
         document.getElementById('modalProductoNombre').innerHTML = `${nombre} <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 align-middle ms-2">${mg} ${unidad}</span>`;
         document.getElementById('modalProductoCat').innerHTML = '<i class="bi bi-tag-fill me-1"></i> ' + cat;
@@ -512,6 +509,14 @@
         const input = document.getElementById('modalCantidad');
         let val = parseInt(input.value) || 1;
         let max = parseInt(input.max) || 99;
+        const limiteStr = document.getElementById('modalLimiteMax')?.value;
+        const limiteNum = parseInt(limiteStr);
+
+        if (delta > 0 && !isNaN(limiteNum) && limiteNum > 0 && val >= limiteNum) {
+            mostrarToast(`No puedes comprar más de ${limiteNum} unidades por pedido.`, 'warning', 10000);
+            return;
+        }
+
         val += delta;
         if (val < 1) val = 1;
         if (val > max) val = max;
@@ -522,9 +527,15 @@
     function validarEntradaModal(input) {
         let val = parseInt(input.value);
         let max = parseInt(input.max) || 99;
-        if (!isNaN(val) && val > max) {
+        const limiteStr = document.getElementById('modalLimiteMax')?.value;
+        const limiteNum = parseInt(limiteStr);
+
+        if (!isNaN(val) && !isNaN(limiteNum) && limiteNum > 0 && val > limiteNum) {
+            input.value = limiteNum;
+            mostrarToast(`No puedes comprar más de ${limiteNum} unidades por pedido.`, 'warning', 10000);
+        } else if (!isNaN(val) && val > max) {
             input.value = max;
-            mostrarToast(`La cantidad máxima permitida para este producto es de ${max} unidades.`, 'warning');
+            mostrarToast(`Solo hay ${max} unidades disponibles de este medicamento.`, 'warning', 3500);
         }
         if (!isNaN(val) && val < 1) {
             input.value = 1;

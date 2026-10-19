@@ -346,6 +346,16 @@ using (var scope = app.Services.CreateScope())
         {
             DbInitializer.SeedUsers(db);
             DbInitializer.SeedCatalog(db);
+
+            // Ajustar límites por pedido: solo medicamentos de control tienen límite, los demás quedan en blanco (null)
+            using var cmdLimits = conn.CreateCommand();
+            cmdLimits.CommandText = @"
+                UPDATE Productos SET LimiteMaximoPorPedido = NULL WHERE LOWER(Nombre) NOT LIKE '%amoxicilina%' AND LOWER(Nombre) NOT LIKE '%ibuprofeno%' AND LOWER(Nombre) NOT LIKE '%omeprazol%' AND LOWER(Nombre) NOT LIKE '%loratadina%';
+                UPDATE Productos SET LimiteMaximoPorPedido = 3 WHERE LOWER(Nombre) LIKE '%amoxicilina%';
+                UPDATE Productos SET LimiteMaximoPorPedido = 4 WHERE LOWER(Nombre) LIKE '%ibuprofeno%' OR LOWER(Nombre) LIKE '%omeprazol%';
+                UPDATE Productos SET LimiteMaximoPorPedido = 5 WHERE LOWER(Nombre) LIKE '%loratadina%';
+            ";
+            cmdLimits.ExecuteNonQuery();
         }
         catch { }
     }

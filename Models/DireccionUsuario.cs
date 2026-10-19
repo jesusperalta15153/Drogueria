@@ -20,8 +20,8 @@ public class DireccionUsuario
     public string NombreContacto { get; set; } = "";
 
     [Required(ErrorMessage = "El teléfono es obligatorio")]
-    [StringLength(10, ErrorMessage = "El teléfono debe tener máximo 10 dígitos")]
-    [RegularExpression(@"^\d{1,10}$", ErrorMessage = "El teléfono debe contener solo dígitos y máximo 10 caracteres")]
+    [StringLength(10, MinimumLength = 10, ErrorMessage = "El teléfono debe tener exactamente 10 dígitos")]
+    [RegularExpression(@"^3\d{9}$", ErrorMessage = "El teléfono debe tener 10 dígitos y comenzar por 3 (ej. 3001234567)")]
     public string Telefono { get; set; } = "";
 
     [Required(ErrorMessage = "La dirección es obligatoria")]

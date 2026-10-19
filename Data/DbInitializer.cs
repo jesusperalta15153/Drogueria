@@ -118,6 +118,7 @@ public static class DbInitializer
             context.SaveChanges();
 
             // Productos iniciales para que el catálogo tenga variedad inmediata
+            // Solo medicamentos con control o prescripción prudente tienen límite por pedido
             var productos = new List<Producto>
             {
                 new Producto
@@ -131,7 +132,7 @@ public static class DbInitializer
                     CategoriaId = catMedicamentos.Id,
                     Stock = 100,
                     StockMinimo = 10,
-                    LimiteMaximoPorPedido = 10,
+                    LimiteMaximoPorPedido = null, // Sin límite restrictivo
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 },
@@ -146,7 +147,7 @@ public static class DbInitializer
                     CategoriaId = catMedicamentos.Id,
                     Stock = 80,
                     StockMinimo = 10,
-                    LimiteMaximoPorPedido = 8,
+                    LimiteMaximoPorPedido = 4, // Límite de 4 unidades por pedido
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 },
@@ -161,7 +162,7 @@ public static class DbInitializer
                     CategoriaId = catMedicamentos.Id,
                     Stock = 50,
                     StockMinimo = 5,
-                    LimiteMaximoPorPedido = 4,
+                    LimiteMaximoPorPedido = 3, // Límite de 3 unidades por pedido
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 },
@@ -176,7 +177,7 @@ public static class DbInitializer
                     CategoriaId = catMedicamentos.Id,
                     Stock = 60,
                     StockMinimo = 8,
-                    LimiteMaximoPorPedido = 6,
+                    LimiteMaximoPorPedido = 5, // Límite de 5 unidades por pedido
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 },
@@ -191,7 +192,7 @@ public static class DbInitializer
                     CategoriaId = catMedicamentos.Id,
                     Stock = 70,
                     StockMinimo = 10,
-                    LimiteMaximoPorPedido = 6,
+                    LimiteMaximoPorPedido = 4, // Límite de 4 unidades por pedido
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 },
@@ -206,7 +207,7 @@ public static class DbInitializer
                     CategoriaId = catVitaminas.Id,
                     Stock = 45,
                     StockMinimo = 5,
-                    LimiteMaximoPorPedido = 5,
+                    LimiteMaximoPorPedido = null, // Libre
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 },
@@ -221,7 +222,7 @@ public static class DbInitializer
                     CategoriaId = catVitaminas.Id,
                     Stock = 35,
                     StockMinimo = 5,
-                    LimiteMaximoPorPedido = 4,
+                    LimiteMaximoPorPedido = null, // Libre
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 },
@@ -236,7 +237,7 @@ public static class DbInitializer
                     CategoriaId = catPrimerosAuxilios.Id,
                     Stock = 90,
                     StockMinimo = 15,
-                    LimiteMaximoPorPedido = 10,
+                    LimiteMaximoPorPedido = null, // Libre
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 },
@@ -251,7 +252,7 @@ public static class DbInitializer
                     CategoriaId = catPrimerosAuxilios.Id,
                     Stock = 75,
                     StockMinimo = 10,
-                    LimiteMaximoPorPedido = 10,
+                    LimiteMaximoPorPedido = null, // Libre
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 },
@@ -266,7 +267,7 @@ public static class DbInitializer
                     CategoriaId = catCuidado.Id,
                     Stock = 60,
                     StockMinimo = 10,
-                    LimiteMaximoPorPedido = 6,
+                    LimiteMaximoPorPedido = null, // Libre
                     Estado = true,
                     FechaCreacion = DateTime.Now
                 }
