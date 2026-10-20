@@ -20,6 +20,12 @@ const dbConfig = {
 
 // URL del sistema FarmaVida para diagnóstico
 const WEB_URL = (process.env.WEB_URL || 'https://drogueria-1ksj.onrender.com').replace(/\/+$/, '');
+const BOT_PHONE_NUMBER = (process.env.BOT_PHONE_NUMBER || '573135958228').replace(/\D/g, '');
+// Leer modo de vinculación desde argumentos de consola
+const args = process.argv.slice(2);
+const useCode = args.includes('--code') || args.includes('--method=code');
+const isQRMode = !useCode;
+
 
 async function getDbConnection() {
     return await mysql.createConnection(dbConfig);
@@ -227,10 +233,36 @@ async function startBot() {
         printQRInTerminal: false
     });
 
+    // Si se eligió vincular por código de teléfono:
+    let pairingRequested = false;
+    if (useCode && BOT_PHONE_NUMBER && !sock.authState.creds.registered) {
+        setTimeout(async () => {
+            if (!sock.authState.creds.registered && !pairingRequested) {
+                pairingRequested = true;
+                try {
+                    const code = await sock.requestPairingCode(BOT_PHONE_NUMBER);
+                    const formatted = code ? code.match(/.{1,4}/g).join('-') : code;
+                    console.log('\n======================================================');
+                    console.log('📲 CÓDIGO DE VINCULACIÓN DIRECTA PARA: +' + BOT_PHONE_NUMBER);
+                    console.log('👉 TU CÓDIGO DE EMPAREJAMIENTO:  [  ' + formatted + '  ]  👈');
+                    console.log('======================================================');
+                    console.log('Pasos en tu WhatsApp (+57 313 595 8228):');
+                    console.log('1. Abre WhatsApp en tu celular');
+                    console.log('2. Ve a Dispositivos vinculados -> Vincular un dispositivo');
+                    console.log('3. Toca abajo: "Vincular con el número de teléfono"');
+                    console.log('4. Ingresa el código: ' + formatted);
+                    console.log('======================================================\n');
+                } catch (err) {
+                    console.log('Aviso al solicitar código:', err.message);
+                }
+            }
+        }, 3500);
+    }
+
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        if (qr) {
+        if (qr && !useCode) {
             console.log('\n======================================================');
             console.log('📱 ESCANEA ESTE CÓDIGO QR DESDE TU WHATSAPP (Dispositivos vinculados):');
             console.log('📸 Se guardó también como imagen en: codigo-qr.png');
@@ -252,19 +284,32 @@ async function startBot() {
 
         if (connection === 'close') {
             const statusCode = (lastDisconnect?.error)?.output?.statusCode;
-            const isLoggedOut = statusCode === DisconnectReason.loggedOut;
-            console.log(`⚠️ Conexión cerrada (Código: ${statusCode || 'desconocido'}). Reconectando en 3 segundos...`);
-            
+            const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401;
+            console.log(`⚠️ Conexión cerrada (Código: ${statusCode || 'desconocido'}).`);
+
+            try {
+                sock.ev.removeAllListeners();
+            } catch (e) {}
+
             if (isLoggedOut) {
-                console.log('❌ Sesión cerrada desde el teléfono. Borrando credenciales para generar nuevo QR...');
-                try {
-                    const fs = require('fs');
-                    fs.rmSync(path.join(__dirname, 'auth_info_baileys'), { recursive: true, force: true });
-                } catch (e) {}
+                console.log('❌ Sesión no válida o cerrada. Limpiando credenciales para iniciar desde cero...');
+                setTimeout(() => {
+                    try {
+                        const fs = require('fs');
+                        const authFolder = path.join(__dirname, 'auth_info_baileys');
+                        if (fs.existsSync(authFolder)) {
+                            fs.rmSync(authFolder, { recursive: true, force: true });
+                        }
+                    } catch (e) {}
+                    console.log('🔄 Reiniciando bot con sesión limpia...\n');
+                    startBot();
+                }, 1500);
+            } else {
+                console.log('🔄 Reconectando en 3 segundos...');
+                setTimeout(() => {
+                    startBot();
+                }, 3000);
             }
-            setTimeout(() => {
-                startBot();
-            }, 3000);
         } else if (connection === 'open') {
             console.log('\n======================================================');
             console.log('🚀 ¡BOT DE WHATSAPP FARMAVIDA CONECTADO EXITOSAMENTE!');

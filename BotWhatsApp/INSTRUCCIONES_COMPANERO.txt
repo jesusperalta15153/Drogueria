@@ -1,37 +1,32 @@
-# 📦 INSTRUCCIONES PARA TU COMPAÑERO
+# 📦 INSTRUCCIONES PARA VINCULAR EL BOT DE WHATSAPP (FARMAVIDA)
 
-¡Hola! Sigue estos sencillos pasos para vincular el bot con la base de datos de tu página web y generar el código QR:
-
----
-
-### PASO 1: Ajustar los datos de conexión (Archivo `.env`)
-Abre con el bloc de notas el archivo `.env` que está dentro de la carpeta del bot y revisa que coincida con tu MySQL y tu página web:
-
-```env
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=Drogueria
-WEB_URL=http://localhost:5062
-```
-*(Si tu contraseña de MySQL es diferente o tu base de datos tiene otro nombre, cámbialo ahí)*.
+¡Hola! El bot está preparado y configurado para operar con el número **3135958228** (+57 313 595 8228).
+Tienes DOS opciones para vincularlo fácilmente:
 
 ---
 
-### PASO 2: Iniciar el Bot
-1. Asegúrate de tener **XAMPP / MySQL** encendido.
-2. Haz doble clic en el archivo:
+### OPCIÓN A: Vinculación directa con Código de 8 dígitos (Recomendada, no requiere cámara)
+1. Haz doble clic en el archivo:
    👉 **`iniciar-bot.bat`**
+2. Espera unos segundos hasta que la consola muestre el código de emparejamiento (ejemplo: `ABCD-1234`).
+3. En el celular con el número **3135958228**:
+   - Abre **WhatsApp**.
+   - Toca los tres puntos (o Configuración) > **Dispositivos vinculados**.
+   - Toca **Vincular un dispositivo**.
+   - En la parte inferior, toca **"Vincular con el número de teléfono"**.
+   - Escribe el código de 8 dígitos que apareció en la consola.
+4. ¡Listo! La consola mostrará: `🚀 ¡BOT DE WHATSAPP FARMAVIDA CONECTADO EXITOSAMENTE!`.
 
 ---
 
-### PASO 3: Pasarle el código QR a tu compañero
-El bot mostrará el código QR en la consola negra y **también creará automáticamente una imagen llamada:**
-🖼️ **`codigo-qr.png`** (dentro de la misma carpeta).
+### OPCIÓN B: Vinculación escaneando Código QR
+1. Haz doble clic en **`iniciar-bot.bat`**.
+2. Verás el código QR en la consola negra y también se creará el archivo **`codigo-qr.png`** en esta misma carpeta.
+3. En WhatsApp > **Dispositivos vinculados** > **Vincular un dispositivo**, apunta la cámara al código QR.
 
-1. Abre WhatsApp / Telegram / Discord y envíale la foto **`codigo-qr.png`** a tu compañero de inmediato (o compártele pantalla por Meet / Discord / AnyDesk).
-2. Ten en cuenta que los códigos QR de WhatsApp vencen cada 20 a 30 segundos, así que cuando él lo escanee debe ser en tiempo real.
-3. Una vez que tu compañero escanee el código con su teléfono, la consola mostrará:
-   `🚀 ¡BOT DE WHATSAPP FARMAVIDA CONECTADO EXITOSAMENTE!`
-4. ¡Listo! El bot ya estará operando conectado a tu base de datos.
+---
+
+### NOTAS DE CONFIGURACIÓN (`.env`):
+- `BOT_PHONE_NUMBER=573135958228` (Número asignado para el bot).
+- `WEB_URL=https://drogueria-1ksj.onrender.com` (Conectado a la API en producción en Render o cámbialo a `http://localhost:5062` si pruebas en local).
+- Si usas base de datos local con XAMPP, asegúrate de tener MySQL encendido.
